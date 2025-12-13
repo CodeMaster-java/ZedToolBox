@@ -19,11 +19,10 @@ Singleplayer-only cheat menu for Project Zomboid focused on fast item spawning, 
 - **Logs robustos:** `ZedToolboxLogger` registra qualquer exceção em `logs/error-<contexto>-<timestamp>.txt`, facilitando suporte e depuração.
 
 ## 📦 Instalação
-1. **Steam Workshop (recomendado):** publique/assine normalmente; o `mod.info` já referencia `ZedToolbox` como pack.
-2. **Instalação manual:**
+1. **Instalação manual:**
    - Copie a pasta `ZedToolBox` para `Zomboid/mods/` no seu usuário.
    - Certifique-se de manter a estrutura `media/lua/...` e o arquivo `mod.info` no diretório raiz.
-3. Ative o mod pelo menu principal de Project Zomboid antes de carregar o save.
+2. Ative o mod pelo menu principal de Project Zomboid antes de carregar o save.
 
 ## 🕹️ Como Usar
 1. Inicie/continue um save singleplayer.
@@ -67,7 +66,7 @@ ZedToolBox/
 ```
 
 ## 🙌 Créditos
-- **Autor:** CodeMaster (aka robso)
+- **Autor:** CodeMaster (aka Robson)
 - **Contribuições:** feedback da comunidade Project Zomboid BR.
 
 Sinta-se à vontade para abrir issues ou Pull Requests com sugestões, traduções adicionais e melhorias gerais. Bons testes e divirta-se dominando Knox County!
