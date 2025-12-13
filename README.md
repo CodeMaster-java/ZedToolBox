@@ -1,72 +1,337 @@
-# Zed Toolbox
+<div align="center">
 
-Singleplayer-only cheat menu for Project Zomboid focused on fast item spawning, curated presets, and a smooth UI experience.
+# 🧰 Zed Toolbox
 
-## 🎯 Visão Geral
-- **Plataforma:** Project Zomboid (Build 41+)
-- **Modo:** Apenas singleplayer (desabilita automaticamente em multiplayer)
-- **Atalho padrão:** Insert abre/fecha o menu (configurável em `CheatMenuMain.lua`)
-- **Versão:** 1.0.0
+**Powerful singleplayer cheat menu for Project Zomboid**  
+*Fast item spawning • Curated presets • Smooth UI experience*
 
-## ✨ Recursos Principais
-- **Catálogo inteligente:** Varre todos os itens registrados pelo `ScriptManager`, organiza por categoria (Armas, Munição, Bolsas, Comida, Médico, Diversos) e ordena alfabeticamente.
-- **Busca instantânea:** Filtra tanto pelo nome exibido quanto pelo `BaseID`, permitindo localizar itens rapidamente.
-- **Favoritos persistentes:** Salve combinações frequentes de item + quantidade + destino (inventário/chão) e recupere com um clique. Persistência via `ModData`, sem necessidade de arquivos externos.
-- **Presets configuráveis:** Monte listas completas de itens para spawn automático. Perfeito para kits de início, loadouts ou testes rápidos.
-- **Spawner flexível:** Escolha entre adicionar direto ao inventário ou derrubar no chão do jogador. Quantidade validada (1–100) para evitar travamentos acidentais.
-- **UI polida:** Painel drag-and-drop, listas com highlight, botões de ação primária e indicadores visuais de status (sucesso/erro).
-- **Internacionalização:** Strings em inglês (EN) e português brasileiro (PT-BR). Fácil extensão adicionando novos arquivos em `media/lua/shared/Translate/`.
-- **Logs robustos:** `ZedToolboxLogger` registra qualquer exceção em `logs/error-<contexto>-<timestamp>.txt`, facilitando suporte e depuração.
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Platform](https://img.shields.io/badge/platform-Project%20Zomboid-green.svg)
+![Build](https://img.shields.io/badge/build-41+-orange.svg)
+![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)
 
-## 📦 Instalação
-1. **Instalação manual:**
-   - Copie a pasta `ZedToolBox` para `Zomboid/mods/` no seu usuário.
-   - Certifique-se de manter a estrutura `media/lua/...` e o arquivo `mod.info` no diretório raiz.
-2. Ative o mod pelo menu principal de Project Zomboid antes de carregar o save.
+---
 
-## 🕹️ Como Usar
-1. Inicie/continue um save singleplayer.
-2. Pressione **Insert** para abrir o menu.
-3. Navegue pelas categorias à esquerda, use a busca para filtrar e selecione o item desejado.
-4. Defina quantidade e destino (Inventário ou Chão) no painel inferior.
-5. Clique em **Spawn** ou dê duplo clique na lista de itens para spawn imediato.
+</div>
 
-> ✅ O menu só é carregado quando um jogador local (index 0) está pronto, evitando erros na tela de carregamento.
+## 📋 Table of Contents
 
-## ⭐ Favoritos & Presets
-- **Adicionar favorito:** selecione um item, configure quantidade/destino e clique em **Add Favorite**.
-- **Spawn favorito:** escolha na combo de favoritos e use **Spawn Favorite**.
-- **Presets:** dê um nome, monte sua lista e salve. Você pode aplicar (preencher campos) ou spawnar todos os itens de uma vez.
-- Dados ficam em `ModData["ZedToolbox"]`, permitindo que sobrevivam a múltiplos saves no mesmo perfil.
+- [🎯 Overview](#-overview)
+- [✨ Features](#-features)
+- [📦 Installation](#-installation)
+- [🕹️ Usage](#️-usage)
+- [⭐ Favorites & Presets](#-favorites--presets)
+- [🌎 Translation](#-translation)
+- [🛠️ Configuration](#️-configuration)
+- [📁 Project Structure](#-project-structure)
+- [🙌 Credits](#-credits)
 
-## 🌎 Tradução
-- Arquivos de idioma em `media/lua/shared/Translate/<Locale>/ZedToolbox_<LOCALE>.txt`.
-- Para adicionar um novo idioma: duplique o arquivo EN, traduza as chaves e atualize o nome da pasta para o código desejado (ex.: `FR`, `ES`).
+## 🎯 Overview
 
-## 🛠️ Configuração & Debug
-- **Atalho personalizado:** edite `CheatMenuMain.Config.toggleKey` em `CheatMenuMain.lua` para outro código de tecla (`Keyboard.KEY_*`).
-- **Resetar catálogo:** chame `CheatMenuItems.refresh()` pelo console para reconstruir a lista após instalar mods que adicionem itens.
-- **Logs:** consulte `Zomboid/mods/ZedToolbox/logs/` para investigar erros capturados por `safeCall`.
+| **Platform** | **Mode** | **Hotkey** | **Version** |
+|:---:|:---:|:---:|:---:|
+| Project Zomboid (Build 41+) | Singleplayer Only | Insert | 1.0.0 |
 
-## 📁 Estrutura Essencial
+> ⚠️ **Note**: Automatically disables in multiplayer mode
+
+## ✨ Features
+
+### 🎪 Smart Catalog System
+- **Intelligent scanning**: Automatically scans all items registered by `ScriptManager`
+- **Smart categorization**: Organized by type (Weapons, Ammo, Bags, Food, Medical, Miscellaneous)
+- **Alphabetical sorting**: Easy navigation through large item lists
+
+### 🔍 Advanced Search
+- **Instant filtering**: Search by display name or `BaseID`
+- **Real-time results**: Find items quickly with dynamic filtering
+- **Multi-criteria support**: Flexible search patterns
+
+### ⭐ Persistent Favorites
+- **Save combinations**: Store item + quantity + destination settings
+- **One-click access**: Recover favorite configurations instantly
+- **Cross-session persistence**: Uses `ModData` for reliable storage
+
+### 📦 Configurable Presets
+- **Complete item lists**: Create full loadouts for automatic spawning
+- **Quick setup**: Perfect for starter kits, loadouts, or rapid testing
+- **Bulk operations**: Spawn entire preset collections at once
+
+### 🎯 Flexible Spawner
+- **Dual destinations**: Add directly to inventory or drop on ground
+- **Quantity validation**: Safe range (1–100) prevents accidental crashes
+- **Smart error handling**: Comprehensive validation and feedback
+
+### 🎨 Polished Interface
+- **Drag-and-drop panels**: Intuitive window management
+- **Visual feedback**: Success/error indicators and highlighted selections
+- **Responsive design**: Optimized for different screen sizes
+
+### 🌍 Internationalization Ready
+- **Multi-language support**: English (EN) and Brazilian Portuguese (PT-BR)
+- **Easy extension**: Add new languages by creating translation files
+- **Dynamic loading**: Automatic locale detection
+
+### 🔧 Robust Logging
+- **Exception tracking**: `ZedToolboxLogger` captures all errors
+- **Timestamped logs**: Detailed error files in `logs/error-<context>-<timestamp>.txt`
+- **Debug support**: Comprehensive logging for troubleshooting
+
+## 📦 Installation
+
+### Manual Installation
+
+1. **Download & Extract**
+   ```
+   📁 Zomboid/mods/ZedToolBox/
+   ├── mod.info
+   └── media/lua/...
+   ```
+
+2. **Verify Structure**
+   - Ensure `mod.info` is in the root directory
+   - Maintain the complete `media/lua/...` structure
+
+3. **Activate Mod**
+   - Launch Project Zomboid
+   - Navigate to **Mods** menu
+   - Enable **Zed Toolbox** before loading your save
+
+### Requirements
+
+| Component | Requirement |
+|:---:|:---:|
+| **Game Version** | Project Zomboid Build 41+ |
+| **Game Mode** | Singleplayer only |
+| **Dependencies** | None |
+
+## 🕹️ Usage
+
+### Quick Start Guide
+
+1. **Launch Game**
+   - Start or continue a singleplayer save
+
+2. **Open Menu**
+   - Press **`Insert`** to toggle the cheat menu
+
+3. **Navigate Items**
+   - Browse categories on the left panel
+   - Use search bar for instant filtering
+   - Select desired item from the list
+
+4. **Configure Spawn**
+   - Set quantity (1-100)
+   - Choose destination:
+     - 📦 **Inventory**: Add directly to player inventory
+     - 🌍 **Ground**: Drop at player's location
+
+5. **Spawn Items**
+   - Click **Spawn** button, or
+   - Double-click item in the list for instant spawn
+
+### 🔥 Pro Tips
+
+> 💡 **Smart Loading**: Menu only loads when local player (index 0) is ready, preventing loading screen errors
+> 
+> ⚡ **Quick Access**: Double-click any item for instant spawn with current settings
+> 
+> 🎯 **Batch Operations**: Use presets to spawn multiple items at once
+
+## ⭐ Favorites & Presets
+
+### 💝 Managing Favorites
+
+<details>
+<summary><strong>➕ Adding Favorites</strong></summary>
+
+1. Select an item from the catalog
+2. Configure quantity and destination
+3. Click **Add Favorite**
+4. Your configuration is saved automatically
+
+</details>
+
+<details>
+<summary><strong>🚀 Using Favorites</strong></summary>
+
+1. Choose from favorites dropdown
+2. Click **Spawn Favorite**
+3. Item spawns with saved settings
+
+</details>
+
+### 📋 Working with Presets
+
+<details>
+<summary><strong>🔨 Creating Presets</strong></summary>
+
+1. Enter a preset name
+2. Add items to your list
+3. Click **Save Preset**
+4. Preset is stored permanently
+
+</details>
+
+<details>
+<summary><strong>⚡ Using Presets</strong></summary>
+
+- **Apply**: Fill form fields with preset data
+- **Spawn All**: Instantly spawn all preset items
+
+</details>
+
+### 💾 Data Persistence
+
+All favorites and presets are stored in `ModData["ZedToolbox"]`, ensuring:
+- ✅ Cross-session persistence
+- ✅ Multiple save compatibility
+- ✅ No external file dependencies
+
+## 🌎 Translation
+
+### 🗣️ Supported Languages
+
+| Language | Code | Status |
+|:---:|:---:|:---:|
+| English | `EN` | ✅ Complete |
+| Brazilian Portuguese | `BP` | ✅ Complete |
+
+### 🔧 Adding New Languages
+
+1. **Create Language Directory**
+   ```
+   media/lua/shared/Translate/<LOCALE>/
+   ```
+
+2. **Copy Base File**
+   ```bash
+   cp ZedToolbox_EN.txt ZedToolbox_<LOCALE>.txt
+   ```
+
+3. **Translate Content**
+   - Translate all text keys
+   - Maintain key structure
+   - Test in-game
+
+4. **Update Folder Name**
+   ```
+   media/lua/shared/Translate/<LOCALE>/
+   ```
+
+### 📂 Translation Structure
+
+```
+media/lua/shared/Translate/
+├── EN/
+│   └── ZedToolbox_EN.txt
+├── BrazilianPortuguese/
+│   └── ZedToolbox_BP.txt
+└── <YourLanguage>/
+    └── ZedToolbox_<CODE>.txt
+```
+
+## 🛠️ Configuration
+
+### ⌨️ Hotkey Customization
+
+**Default**: `Insert` key
+
+**To change**:
+1. Edit `CheatMenuMain.Config.toggleKey` in [`CheatMenuMain.lua`](media/lua/client/CheatMenuMain.lua)
+2. Use any `Keyboard.KEY_*` constant
+3. Save and restart the game
+
+```lua
+-- Example: Change to F1
+CheatMenuMain.Config.toggleKey = Keyboard.KEY_F1
+```
+
+### 🔄 Catalog Management
+
+**Refresh catalog** after installing item mods:
+```lua
+-- In-game console
+CheatMenuItems.refresh()
+```
+
+### 🐛 Debugging & Logs
+
+| Log Type | Location | Purpose |
+|:---:|:---:|:---:|
+| **Error Logs** | `Zomboid/mods/ZedToolbox/logs/` | Exception tracking |
+| **Format** | `error-<context>-<timestamp>.txt` | Detailed error info |
+| **Usage** | Troubleshooting & support | Debug assistance |
+
+**Log Features**:
+- 🕒 Timestamped entries
+- 📍 Context-aware logging
+- 🛡️ Safe call wrappers
+- 📝 Detailed stack traces
+
+## 📁 Project Structure
+
 ```
 ZedToolBox/
-├─ mod.info
-└─ media/
-   └─ lua/
-      ├─ client/
-      │  ├─ CheatMenuMain.lua      # Toggle e bindings
-      │  ├─ CheatMenuUI.lua        # Painel completo (favoritos, presets, busca)
-      │  └─ CheatMenuSpawner.lua   # Lógica de spawn / validação
-      └─ shared/
-         ├─ CheatMenuItems.lua     # Catálogo e categorização
-         ├─ CheatMenuLogger.lua    # Wrapper resiliente de log
-         ├─ ZedToolboxLogger.lua   # Escrita de arquivos de log
-         └─ CheatMenuText.lua      # Helper de tradução
+├── 📄 mod.info                          # Mod metadata
+├── 📖 README.md                         # Documentation
+└── 📁 media/
+    └── 📁 lua/
+        ├── 📁 client/                   # Client-side scripts
+        │   ├── 🎮 CheatMenuMain.lua     # Toggle & key bindings
+        │   ├── 🖥️ CheatMenuUI.lua       # Complete UI panel
+        │   └── 🚀 CheatMenuSpawner.lua  # Spawn logic & validation
+        └── 📁 shared/                   # Shared utilities
+            ├── 📦 CheatMenuItems.lua    # Item catalog & categorization
+            ├── 📝 CheatMenuLogger.lua   # Resilient log wrapper
+            ├── 🔍 ZedToolboxLogger.lua  # File logging system
+            ├── 🌐 CheatMenuText.lua     # Translation helper
+            └── 📁 Translate/            # Language files
+                ├── 📁 BrazilianPortuguese/
+                │   └── 🇧🇷 ZedToolbox_BP.txt
+                └── 📁 EN/
+                    └── 🇺🇸 ZedToolbox_EN.txt
 ```
 
-## 🙌 Créditos
-- **Autor:** CodeMaster (aka Robson)
-- **Contribuições:** feedback da comunidade Project Zomboid BR.
+### 🧩 Core Components
 
-Sinta-se à vontade para abrir issues ou Pull Requests com sugestões, traduções adicionais e melhorias gerais. Bons testes e divirta-se dominando Knox County!
+| Component | Responsibility |
+|:---:|:---:|
+| **CheatMenuMain** | Hotkey handling & menu toggle |
+| **CheatMenuUI** | Complete interface rendering |
+| **CheatMenuSpawner** | Item spawning & validation |
+| **CheatMenuItems** | Catalog management & categorization |
+| **Logger System** | Error tracking & file output |
+| **Translation** | Multi-language support |
+
+## 🙌 Credits
+
+<div align="center">
+
+**Created with ❤️ by CodeMaster (Robson)**
+
+*Special thanks to the Project Zomboid BR community for valuable feedback*
+
+---
+
+### 📞 Support & Contributions
+
+| Type | Link |
+|:---:|:---:|
+| 🐛 **Issues** | [Report Problems](https://github.com/yourusername/ZedToolbox/issues) |
+| 💡 **Features** | [Request Features](https://github.com/yourusername/ZedToolbox/issues) |
+| 🔀 **Pull Requests** | [Contribute Code](https://github.com/yourusername/ZedToolbox/pulls) |
+| 🌍 **Translations** | [Add Languages](https://github.com/yourusername/ZedToolbox/pulls) |
+
+### 🎮 Happy zombie slaying in Knox County!
+
+</div>
+
+---
+
+<div align="center">
+
+**If you find this mod helpful, consider ⭐ starring the repository!**
+
+*Made for the Project Zomboid community • Free & Open Source*
+
+</div>
