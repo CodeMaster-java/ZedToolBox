@@ -21,12 +21,14 @@
 - [📦 Installation](#-installation)
 - [🕹️ Usage](#️-usage)
 - [⭐ Favorites & Presets](#-favorites--presets)
-- [🌎 Translation](#-translation)
 - [🛠️ Configuration](#️-configuration)
 - [📁 Project Structure](#-project-structure)
 - [🙌 Credits](#-credits)
+- [🧠 Advanced / Developers](#-advanced--developers)
 
 ## 🎯 Overview
+
+**A fast, clean and reliable cheat toolbox focused on testing, sandbox gameplay and mod development.**
 
 | **Platform** | **Mode** | **Hotkey** | **Version** |
 |:---:|:---:|:---:|:---:|
@@ -108,34 +110,21 @@
 
 ### Quick Start Guide
 
-1. **Launch Game**
-   - Start or continue a singleplayer save
-
-2. **Open Menu**
-   - Press **`Insert`** to toggle the cheat menu
-
-3. **Navigate Items**
-   - Browse categories on the left panel
-   - Use search bar for instant filtering
-   - Select desired item from the list
-
-4. **Configure Spawn**
-   - Set quantity (1-100)
-   - Choose destination:
-     - 📦 **Inventory**: Add directly to player inventory
-     - 🌍 **Ground**: Drop at player's location
-
-5. **Spawn Items**
-   - Click **Spawn** button, or
-   - Double-click item in the list for instant spawn
+1. **Launch Game** → Start or continue a singleplayer save
+2. **Open Menu** → Press **`Insert`** to toggle the interface
+3. **Navigate Items** → Browse categories or use search bar for instant filtering
+4. **Configure & Add**:
+   - Set quantity (1-100) and choose destination
+   - 📦 **Inventory**: Direct player addition • 🌍 **Ground**: Drop at location
+   - Click **Add** button or double-click item for instant addition
 
 ### 🔥 Pro Tips
 
-> 💡 **Smart Loading**: Menu only loads when local player (index 0) is ready, preventing loading screen errors
+> 💡 **Smart Loading**: Interface loads only when player is ready, preventing errors
 > 
-> ⚡ **Quick Access**: Double-click any item for instant spawn with current settings
+> ⚡ **Quick Access**: Double-click any item for instant addition with current settings
 > 
-> 🎯 **Batch Operations**: Use presets to spawn multiple items at once
+> 🎯 **Batch Operations**: Use presets to add multiple items at once
 
 ## ⭐ Favorites & Presets
 
@@ -187,49 +176,6 @@ All favorites and presets are stored in `ModData["ZedToolbox"]`, ensuring:
 - ✅ Multiple save compatibility
 - ✅ No external file dependencies
 
-## 🌎 Translation
-
-### 🗣️ Supported Languages
-
-| Language | Code | Status |
-|:---:|:---:|:---:|
-| English | `EN` | ✅ Complete |
-| Brazilian Portuguese | `BP` | ✅ Complete |
-
-### 🔧 Adding New Languages
-
-1. **Create Language Directory**
-   ```
-   media/lua/shared/Translate/<LOCALE>/
-   ```
-
-2. **Copy Base File**
-   ```bash
-   cp ZedToolbox_EN.txt ZedToolbox_<LOCALE>.txt
-   ```
-
-3. **Translate Content**
-   - Translate all text keys
-   - Maintain key structure
-   - Test in-game
-
-4. **Update Folder Name**
-   ```
-   media/lua/shared/Translate/<LOCALE>/
-   ```
-
-### 📂 Translation Structure
-
-```
-media/lua/shared/Translate/
-├── EN/
-│   └── ZedToolbox_EN.txt
-├── BrazilianPortuguese/
-│   └── ZedToolbox_BP.txt
-└── <YourLanguage>/
-    └── ZedToolbox_<CODE>.txt
-```
-
 ## 🛠️ Configuration
 
 ### ⌨️ Hotkey Customization
@@ -253,20 +199,6 @@ CheatMenuMain.Config.toggleKey = Keyboard.KEY_F1
 -- In-game console
 CheatMenuItems.refresh()
 ```
-
-### 🐛 Debugging & Logs
-
-| Log Type | Location | Purpose |
-|:---:|:---:|:---:|
-| **Error Logs** | `Zomboid/mods/ZedToolbox/logs/` | Exception tracking |
-| **Format** | `error-<context>-<timestamp>.txt` | Detailed error info |
-| **Usage** | Troubleshooting & support | Debug assistance |
-
-**Log Features**:
-- 🕒 Timestamped entries
-- 📍 Context-aware logging
-- 🛡️ Safe call wrappers
-- 📝 Detailed stack traces
 
 ## 📁 Project Structure
 
@@ -307,7 +239,7 @@ ZedToolBox/
 
 <div align="center">
 
-**Created with ❤️ by CodeMaster (Robson)**
+**Created with ❤️ by CodeMaster**
 
 *Special thanks to the Project Zomboid BR community for valuable feedback*
 
@@ -325,6 +257,49 @@ ZedToolBox/
 ### 🎮 Happy zombie slaying in Knox County!
 
 </div>
+
+---
+
+## 🧠 Advanced / Developers
+
+<details>
+<summary><strong>🌎 Translation System</strong></summary>
+
+### 🗣️ Supported Languages
+
+| Language | Code | Status |
+|:---:|:---:|:---:|
+| English | `EN` | ✅ Complete |
+| Brazilian Portuguese | `BP` | ✅ Complete |
+
+### 🔧 Adding New Languages
+
+1. **Create Language Directory**: `media/lua/shared/Translate/<LOCALE>/`
+2. **Copy Base File**: `cp ZedToolbox_EN.txt ZedToolbox_<LOCALE>.txt`
+3. **Translate Content**: Maintain key structure and test in-game
+4. **Update Folder Name**: Use proper locale code
+
+### 📂 Structure
+```
+media/lua/shared/Translate/
+├── EN/ZedToolbox_EN.txt
+├── BrazilianPortuguese/ZedToolbox_BP.txt
+└── <YourLanguage>/ZedToolbox_<CODE>.txt
+```
+
+</details>
+
+<details>
+<summary><strong>🐛 Debugging & Logs</strong></summary>
+
+| Log Type | Location | Purpose |
+|:---:|:---:|:---:|
+| **Error Logs** | `Zomboid/mods/ZedToolbox/logs/` | Exception tracking |
+| **Format** | `error-<context>-<timestamp>.txt` | Detailed error info |
+
+**Features**: Timestamped entries • Context-aware logging • Safe call wrappers • Detailed stack traces
+
+</details>
 
 ---
 
