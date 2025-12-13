@@ -249,10 +249,10 @@ ZedToolBox/
 
 | Type | Link |
 |:---:|:---:|
-| 🐛 **Issues** | [Report Problems](https://github.com/yourusername/ZedToolbox/issues) |
-| 💡 **Features** | [Request Features](https://github.com/yourusername/ZedToolbox/issues) |
-| 🔀 **Pull Requests** | [Contribute Code](https://github.com/yourusername/ZedToolbox/pulls) |
-| 🌍 **Translations** | [Add Languages](https://github.com/yourusername/ZedToolbox/pulls) |
+| 🐛 **Issues** | [Report Problems](https://github.com/CodeMaster-java/ZedToolbox/issues) |
+| 💡 **Features** | [Request Features](https://github.com/CodeMaster-java/ZedToolbox/issues) |
+| 🔀 **Pull Requests** | [Contribute Code](https://github.com/CodeMaster-java/ZedToolbox/pulls) |
+| 🌍 **Translations** | [Add Languages](https://github.com/CodeMaster-java/ZedToolbox/pulls) |
 
 ### 🎮 Happy zombie slaying in Knox County!
 
