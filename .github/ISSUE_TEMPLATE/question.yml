@@ -1,0 +1,14 @@
+name: ❓ Question
+description: Ask a question or request clarification
+title: "[Question]: "
+labels: ["question"]
+assignees: []
+
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      placeholder: Ask your question here
+    validations:
+      required: true
