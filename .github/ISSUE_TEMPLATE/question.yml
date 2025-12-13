@@ -1,14 +1,35 @@
-name: ❓ Question
-description: Ask a question or request clarification
-title: "[Question]: "
+name: Support Question
+description: Request clarification or guidance about the project.
+title: "Question: <topic>"
 labels: ["question"]
 assignees: []
 
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a question, please review the documentation and existing issues. Provide enough context so we can answer quickly.
+
   - type: textarea
     id: question
     attributes:
       label: Question
-      placeholder: Ask your question here
+      description: Clearly state your question or the information you are seeking.
+      placeholder: How do I enable the debug logging output in multiplayer?
     validations:
       required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Share any relevant background, configuration details, or previous attempts.
+      placeholder: |
+        - Mod version / Project Zomboid build
+        - Steps already taken or docs consulted
+
+  - type: textarea
+    id: attachments
+    attributes:
+      label: Additional Details
+      description: Include links, screenshots, or code snippets that may help clarify the question.
