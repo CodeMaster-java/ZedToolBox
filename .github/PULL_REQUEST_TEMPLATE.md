@@ -1,53 +1,45 @@
-## Summary
-Provide a concise overview of the problem and the solution introduced in this pull request.
+## 📌 Description
+Describe clearly what this Pull Request changes or adds.
 
 ---
 
-## Change Details
-- [ ] Bug fix (non-breaking change)
-- [ ] New feature (non-breaking change)
-- [ ] UI / UX improvement
-- [ ] Refactor (no functional change)
-- [ ] Documentation update
-- [ ] Breaking change (explain impact below)
+## 🧩 Type of Change
+Mark what applies:
 
-Key updates:
--
+- [ ] 🐛 Bug fix (non-breaking change)
+- [ ] ✨ New feature (non-breaking change)
+- [ ] 💄 UI / UX improvement
+- [ ] ♻️ Refactor (no functional change)
+- [ ] 📝 Documentation update
 
 ---
 
-## Testing
-Describe how you validated the changes and include build numbers when relevant.
+## 🧪 Testing
+Explain how this was tested:
 
 - [ ] Tested in Project Zomboid Build 41
 - [ ] Tested in Project Zomboid Build 40
-- [ ] Other (describe below)
-- [ ] Not tested (justify below)
+- [ ] Not tested (explain below)
 
-Testing notes:
--
+Details:
 
----
-
-## Screenshots / Media (optional)
-Attach images or GIFs that help reviewers understand the change.
 
 ---
 
-## Deployment / Compatibility Considerations
-List any migration steps, save incompatibilities, or other follow-up tasks.
--
+## 📷 Screenshots (if applicable)
+Add screenshots or GIFs showing the change.
 
 ---
 
-## Checklist
-- [ ] Code follows project conventions and Lua style
-- [ ] Unit or gameplay tests cover critical paths (if applicable)
-- [ ] No breaking changes introduced, or documented above
-- [ ] Documentation updated where needed
-- [ ] Related issues linked
+## ✅ Checklist
+Before submitting, please confirm:
+
+- [ ] Code follows the project style
+- [ ] No breaking changes introduced
+- [ ] Related issues are linked
+- [ ] Documentation updated (if needed)
 
 ---
 
-## Related Issues
-Closes #
+## 🔗 Related Issues
+Closes # (issue number, if applicable)

@@ -1,63 +1,24 @@
-name: Feature Request
-description: Propose a new capability or improvement for the project.
-title: "Feature: <summary>"
+name: ✨ Feature Request
+description: Suggest a new feature or improvement
+title: "[Feature]: "
 labels: ["enhancement"]
 assignees: []
 
 body:
-  - type: markdown
+  - type: textarea
+    id: feature
     attributes:
-      value: |
-        Help us understand the opportunity you have identified and how it would benefit the community.
-
-  - type: input
-    id: summary
-    attributes:
-      label: Summary
-      description: Provide a short title for the requested change.
-      placeholder: Add quick search presets to the cheat menu
+      label: Feature Description
+      description: What would you like to see added?
+      placeholder: Describe the feature
     validations:
       required: true
 
   - type: textarea
     id: motivation
     attributes:
-      label: Problem Statement
-      description: Describe the problem or limitation you are facing.
-      placeholder: Switching between commonly spawned items requires many clicks.
+      label: Motivation
+      description: Why is this feature useful?
+      placeholder: Explain the use case
     validations:
       required: true
-
-  - type: textarea
-    id: proposal
-    attributes:
-      label: Proposed Solution
-      description: Outline the behaviour or UI you would like to see.
-      placeholder: |
-        - Add a favourite presets toolbar with custom hotkeys
-        - Allow importing/exporting preset lists
-    validations:
-      required: true
-
-  - type: textarea
-    id: alternatives
-    attributes:
-      label: Alternatives Considered
-      description: Mention any alternative approaches or workarounds you tried.
-      placeholder: Manually editing mod data each session.
-
-  - type: textarea
-    id: impact
-    attributes:
-      label: Impact
-      description: Explain who benefits from this change and how success can be measured.
-      placeholder: Speed up item spawning for server admins.
-
-  - type: checkboxes
-    id: checklist
-    attributes:
-      label: Submission Checklist
-      options:
-        - label: I have searched existing issues to avoid duplicates.
-          required: true
-        - label: I am willing to help test or validate this change.

@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Project Documentation
+  - name: 📖 Documentation
     url: https://github.com/CodeMaster-java/ZedToolBox
-    about: Review the README and wiki for setup instructions and FAQs before filing an issue.
+    about: Check the documentation before opening an issue
