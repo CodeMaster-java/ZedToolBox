@@ -2,7 +2,7 @@
 
 # 🧰 Zed Toolbox
 
-**Powerful singleplayer cheat menu for Project Zomboid**  
+**Powerful singleplayer cheat menu for Project Zomboid**
 *Fast item spawning • Curated presets • Smooth UI experience*
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
