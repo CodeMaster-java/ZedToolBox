@@ -125,8 +125,8 @@ function CheatMenuUI:createChildren()
         list:drawText(item.text, 10, y + 5, tint, tint, tint, 1, UIFont.Small)
         return y + item.height
     end
-    self.categoryList.onMouseUp = function(list, x, y)
-        ISScrollingListBox.onMouseUp(list, x, y)
+    self.categoryList.onMouseDown = function(list, x, y)
+        ISScrollingListBox.onMouseDown(list, x, y)
         self:onCategoryChanged()
     end
     self:addChild(self.categoryList)
@@ -353,14 +353,16 @@ function CheatMenuUI:populateCategories()
     if previous then
         local items = self.categoryList.items or {}
         for index, item in ipairs(items) do
-            if item.data == previous then
+            local value = item.item or item.data
+            if value == previous then
                 self.categoryList.selected = index
                 break
             end
         end
     end
     local first = getListSelection(self.categoryList)
-    self.selectedCategory = first and first.data or order[1] or "Misc"
+    local initial = first and (first.item or first.data)
+    self.selectedCategory = initial or order[1] or "Misc"
 end
 
 function CheatMenuUI:applyFilters()
@@ -418,8 +420,9 @@ end
 
 function CheatMenuUI:onCategoryChanged()
     local selected = getListSelection(self.categoryList)
-    if selected and selected.data then
-        self.selectedCategory = selected.data
+    local category = selected and (selected.item or selected.data)
+    if category then
+        self.selectedCategory = category
         self:applyFilters()
     end
 end
