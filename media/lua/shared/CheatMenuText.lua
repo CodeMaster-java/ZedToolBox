@@ -15,12 +15,31 @@ local LANGUAGE_ALIASES = {
     brazilianportuguese = "pt_br",
     brazillianportuguese = "pt_br",
     portuguese = "pt_br",
-    pt_br = "pt_br"
+    pt_br = "pt_br",
+    spanish = "es",
+    espanol = "es",
+    ["español"] = "es",
+    es = "es",
+    german = "de",
+    deutsch = "de",
+    de = "de",
+    french = "fr",
+    francais = "fr",
+    ["français"] = "fr",
+    fr = "fr",
+    russian = "ru",
+    ["русскии"] = "ru",
+    ["русский"] = "ru",
+    ru = "ru"
 }
 
 local LANGUAGE_LABELS = {
     en = "English",
-    pt_br = "Português (Brasil)"
+    pt_br = "Portuguese (Brazil)",
+    es = "Spanish",
+    de = "Deutsch",
+    fr = "French",
+    ru = "Russian"
 }
 
 local function discoverLanguages()
@@ -61,6 +80,18 @@ local function discoverLanguages()
     end
     if not languagesById.pt_br then
         languagesById.pt_br = { id = "pt_br", label = LANGUAGE_LABELS.pt_br or "Brazilian Portuguese", path = "media/lua/shared/Translate/BrazilianPortuguese/ZedToolbox_BP.txt" }
+    end
+    if not languagesById.es then
+        languagesById.es = { id = "es", label = LANGUAGE_LABELS.es or "Spanish", path = "media/lua/shared/Translate/Spanish/ZedToolbox_ES.txt" }
+    end
+    if not languagesById.de then
+        languagesById.de = { id = "de", label = LANGUAGE_LABELS.de or "German", path = "media/lua/shared/Translate/German/ZedToolbox_DE.txt" }
+    end
+    if not languagesById.fr then
+        languagesById.fr = { id = "fr", label = LANGUAGE_LABELS.fr or "French", path = "media/lua/shared/Translate/French/ZedToolbox_FR.txt" }
+    end
+    if not languagesById.ru then
+        languagesById.ru = { id = "ru", label = LANGUAGE_LABELS.ru or "Russian", path = "media/lua/shared/Translate/Russian/ZedToolbox_RU.txt" }
     end
     languages = {}
     for _, entry in pairs(languagesById) do

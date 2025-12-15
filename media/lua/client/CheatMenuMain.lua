@@ -7,13 +7,43 @@ local CheatMenuLogger = require "CheatMenuLogger"
 
 local CheatMenuMain = {}
 
+local MODDATA_KEY = "ZedToolbox"
+local DEFAULT_TOGGLE_KEY = Keyboard.KEY_INSERT
+
 CheatMenuMain.Config = {
-    toggleKey = Keyboard.KEY_INSERT
+    toggleKey = DEFAULT_TOGGLE_KEY
 }
+
+local function readToggleKeyFromModData()
+    if not ModData or not ModData.getOrCreate then
+        return nil
+    end
+    local ok, data = pcall(ModData.getOrCreate, MODDATA_KEY)
+    if not ok or type(data) ~= "table" then
+        return nil
+    end
+    data.config = data.config or {}
+    local stored = data.config.toggleKey
+    if type(stored) == "number" then
+        return stored
+    end
+    return nil
+end
+
+function CheatMenuMain.syncToggleKey()
+    local stored = readToggleKeyFromModData()
+    if type(stored) == "number" then
+        CheatMenuMain.Config.toggleKey = stored
+        CheatMenuMain._cachedToggleKey = stored
+    elseif type(CheatMenuMain.Config.toggleKey) ~= "number" then
+        CheatMenuMain.Config.toggleKey = DEFAULT_TOGGLE_KEY
+    end
+end
 
 function CheatMenuMain.setToggleKey(keyCode)
     if type(keyCode) == "number" then
         CheatMenuMain.Config.toggleKey = keyCode
+        CheatMenuMain._cachedToggleKey = keyCode
     end
 end
 
@@ -158,6 +188,7 @@ function CheatMenuMain.bindEvents()
     end)
 end
 
+CheatMenuMain.syncToggleKey()
 CheatMenuMain.bindEvents()
 
 return CheatMenuMain

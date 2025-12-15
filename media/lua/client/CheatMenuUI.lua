@@ -43,6 +43,69 @@ local SEARCH_FIELD_WIDTH = 280
 local PRESET_HEADER_GAP = 10
 local CREDIT_TEXT = "by CodeMaster"
 
+local HOTKEY_SOURCE = {
+    { label = "Insert", code = Keyboard.KEY_INSERT },
+    { label = "Delete", code = Keyboard.KEY_DELETE },
+    { label = "Home", code = Keyboard.KEY_HOME },
+    { label = "End", code = Keyboard.KEY_END },
+    { label = "F1", code = Keyboard.KEY_F1 },
+    { label = "F2", code = Keyboard.KEY_F2 },
+    { label = "F3", code = Keyboard.KEY_F3 },
+    { label = "F4", code = Keyboard.KEY_F4 },
+    { label = "F5", code = Keyboard.KEY_F5 },
+    { label = "F6", code = Keyboard.KEY_F6 },
+    { label = "F7", code = Keyboard.KEY_F7 },
+    { label = "F8", code = Keyboard.KEY_F8 },
+    { label = "F9", code = Keyboard.KEY_F9 },
+    { label = "F10", code = Keyboard.KEY_F10 },
+    { label = "F11", code = Keyboard.KEY_F11 },
+    { label = "F12", code = Keyboard.KEY_F12 },
+    { label = "Q", code = Keyboard.KEY_Q },
+    { label = "E", code = Keyboard.KEY_E },
+    { label = "R", code = Keyboard.KEY_R },
+    { label = "T", code = Keyboard.KEY_T },
+    { label = "Y", code = Keyboard.KEY_Y },
+    { label = "U", code = Keyboard.KEY_U },
+    { label = "I", code = Keyboard.KEY_I },
+    { label = "O", code = Keyboard.KEY_O },
+    { label = "P", code = Keyboard.KEY_P },
+    { label = "K", code = Keyboard.KEY_K },
+    { label = "L", code = Keyboard.KEY_L },
+    { label = "Z", code = Keyboard.KEY_Z },
+    { label = "X", code = Keyboard.KEY_X },
+    { label = "C", code = Keyboard.KEY_C },
+    { label = "V", code = Keyboard.KEY_V },
+    { label = "B", code = Keyboard.KEY_B }
+}
+
+local HOTKEY_OPTIONS_CACHE = nil
+
+local function getHotkeyOptions()
+    if not HOTKEY_OPTIONS_CACHE then
+        HOTKEY_OPTIONS_CACHE = {}
+        for _, entry in ipairs(HOTKEY_SOURCE) do
+            if type(entry.code) == "number" then
+                table.insert(HOTKEY_OPTIONS_CACHE, entry)
+            end
+        end
+    end
+    return HOTKEY_OPTIONS_CACHE
+end
+
+local function getCheatMenuMain()
+    if package and package.loaded then
+        local loaded = package.loaded["CheatMenuMain"]
+        if type(loaded) == "table" then
+            return loaded
+        end
+    end
+    local ok, main = pcall(require, "CheatMenuMain")
+    if ok and type(main) == "table" then
+        return main
+    end
+    return nil
+end
+
 CheatMenuUI.Width = PANEL_WIDTH
 CheatMenuUI.Height = PANEL_HEIGHT
 
@@ -114,6 +177,7 @@ function CheatMenuUI:initialise()
     self:loadPersistentData()
     self:refreshFavoritesUI()
     self:refreshPresetsUI()
+    self:populateHotkeyOptions(self.config and self.config.toggleKey)
     self:populateLanguageOptions()
     self:applyTranslations()
 end
@@ -384,6 +448,20 @@ function CheatMenuUI:createChildren()
     self:addChild(self.applyLanguageBtn)
     self:addToTab("config", self.applyLanguageBtn)
 
+    local hotkeyY = configContentTop + 44
+    self.hotkeyLabelPos = { x = PADDING, y = hotkeyY - 18 }
+    self.hotkeyCombo = ISComboBox:new(PADDING, hotkeyY, configComboWidth, 24, self, nil)
+    self.hotkeyCombo:initialise()
+    self.hotkeyCombo:instantiate()
+    self:addChild(self.hotkeyCombo)
+    self:addToTab("config", self.hotkeyCombo)
+
+    self.applyHotkeyBtn = ISButton:new(applyBtnX, hotkeyY, 120, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_SetHotkey", "Set Key"), self, CheatMenuUI.onApplyHotkey)
+    self.applyHotkeyBtn:initialise()
+    self.applyHotkeyBtn:instantiate()
+    self:addChild(self.applyHotkeyBtn)
+    self:addToTab("config", self.applyHotkeyBtn)
+
     self:setActiveTab(self.activeTab)
 end
 
@@ -400,9 +478,31 @@ function CheatMenuUI:loadPersistentData()
     self.favorites = data.favorites
     self.presets = data.presets
     self.config = data.config or {}
+    local needsFlush = false
+    local toggleKey = tonumber(self.config.toggleKey)
+    if not toggleKey then
+        toggleKey = self:getDefaultToggleKey()
+        self.config.toggleKey = toggleKey
+        needsFlush = true
+    end
+    local main = getCheatMenuMain()
+    if main and type(main.setToggleKey) == "function" then
+        main.setToggleKey(toggleKey)
+    end
     local preferredLanguage = self.config.language or CheatMenuText.getCurrentLanguage() or CheatMenuText.getDefaultLanguage()
     CheatMenuText.setLanguage(preferredLanguage)
     self.config.language = CheatMenuText.getCurrentLanguage()
+    if needsFlush then
+        self:flushPersistentData()
+    end
+end
+
+function CheatMenuUI:getDefaultToggleKey()
+    local main = getCheatMenuMain()
+    if main and type(main.Config) == "table" and type(main.Config.toggleKey) == "number" then
+        return main.Config.toggleKey
+    end
+    return Keyboard.KEY_INSERT
 end
 
 function CheatMenuUI:setActiveTab(tabId)
@@ -475,6 +575,29 @@ function CheatMenuUI:onApplyLanguage()
     self:setStatus(true, CheatMenuText.get(messageKey, "Language updated."))
 end
 
+function CheatMenuUI:onApplyHotkey()
+    if not self.hotkeyCombo or not self.hotkeyCombo.options then
+        return
+    end
+    local option = self.hotkeyCombo.options[self.hotkeyCombo.selected]
+    if not option or not option.data then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusHotkeyMissing", "Select a key first."))
+        return
+    end
+    local keyCode = option.data
+    self.config = self.config or {}
+    local changed = self.config.toggleKey ~= keyCode
+    self.config.toggleKey = keyCode
+    self:flushPersistentData()
+    local main = getCheatMenuMain()
+    if main and type(main.setToggleKey) == "function" then
+        main.setToggleKey(keyCode)
+    end
+    self:populateHotkeyOptions(keyCode)
+    local messageKey = changed and "UI_ZedToolbox_StatusHotkeyApplied" or "UI_ZedToolbox_StatusHotkeyApplied"
+    self:setStatus(true, CheatMenuText.get(messageKey, "Hotkey updated."))
+end
+
 function CheatMenuUI:populateLanguageOptions(selectedId)
     if not self.languageCombo then
         return
@@ -490,6 +613,24 @@ function CheatMenuUI:populateLanguageOptions(selectedId)
         end
     end
     self.languageCombo.selected = fallbackIndex
+end
+
+function CheatMenuUI:populateHotkeyOptions(selectedKey)
+    if not self.hotkeyCombo then
+        return
+    end
+    local targetKey = tonumber(selectedKey) or tonumber(self.config and self.config.toggleKey) or self:getDefaultToggleKey()
+    self.hotkeyCombo:clear()
+    local index = 1
+    local fallbackIndex = 1
+    for _, option in ipairs(getHotkeyOptions()) do
+        self.hotkeyCombo:addOptionWithData(option.label, option.code)
+        if option.code == targetKey then
+            fallbackIndex = index
+        end
+        index = index + 1
+    end
+    self.hotkeyCombo.selected = fallbackIndex
 end
 
 function CheatMenuUI:refreshTargetCombo()
@@ -540,9 +681,13 @@ function CheatMenuUI:applyTranslations()
     if self.applyLanguageBtn then
         self.applyLanguageBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Apply", "Apply"))
     end
+    if self.applyHotkeyBtn then
+        self.applyHotkeyBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_SetHotkey", "Set Key"))
+    end
     self:refreshTargetCombo()
     self:refreshCategoryLabels()
     self:populateLanguageOptions(self.config and self.config.language)
+    self:populateHotkeyOptions(self.config and self.config.toggleKey)
 end
 
 function CheatMenuUI:refreshCategoryLabels()
@@ -893,6 +1038,7 @@ function CheatMenuUI:show()
     self:refreshFavoritesUI()
     self:refreshPresetsUI()
     self:populateLanguageOptions(self.config and self.config.language)
+    self:populateHotkeyOptions(self.config and self.config.toggleKey)
     self:applyTranslations()
     self:setActiveTab(self.activeTab)
     if self.activeTab == "items" then
@@ -963,6 +1109,9 @@ function CheatMenuUI:prerender()
     if self.activeTab == "config" and self.languageLabelPos then
         self:drawText(CheatMenuText.get("UI_ZedToolbox_ConfigLanguage", "Language"), self.languageLabelPos.x, self.languageLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
     end
+    if self.activeTab == "config" and self.hotkeyLabelPos then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_ConfigHotkey", "Toggle Hotkey"), self.hotkeyLabelPos.x, self.hotkeyLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
 end
 
 local GUARD_METHODS = {
@@ -979,6 +1128,7 @@ local GUARD_METHODS = {
     "onApplyPreset",
     "onSpawnPreset",
     "onRemovePreset",
+    "onApplyHotkey",
     "onSpawnClicked"
 }
 
