@@ -84,7 +84,7 @@
 
 ### 🎨 Version 1.2.0 - UI Enhancements
 
-> **🗓️ Estimated Release**: Early 2025
+> **🗓️ Estimated Release**: Early 2026
 
 | **Feature** | **Description** | **Priority** | **Progress** |
 |:---|:---|:---:|:---:|
