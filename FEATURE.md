@@ -95,7 +95,7 @@
 
 ### 📊 Version 1.3.0 - Enhanced Features
 
-> **🗓️ Estimated Release**: Mid 2025
+> **🗓️ Estimated Release**: Mid 2026
 
 | **Feature** | **Description** | **Priority** | **Progress** |
 |:---|:---|:---:|:---:|
