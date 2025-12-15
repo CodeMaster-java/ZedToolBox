@@ -77,7 +77,7 @@ local function getItemDisplayName(entry)
         return ""
     end
     local key = entry.fullType and ("UI_ZedToolbox_Item_" .. entry.fullType) or nil
-    local fallback = entry.name or entry.localizedName or entry.fullType or ""
+    local fallback = entry.name or entry.fullType or ""
     return CheatMenuText.get(key, fallback)
 end
 
@@ -632,11 +632,7 @@ function CheatMenuUI:refreshFavoritesUI()
     end
     self.favoritesCombo:clear()
     for _, entry in ipairs(self.favorites or {}) do
-        local display = getItemDisplayName({
-            name = entry.label or entry.baseId,
-            localizedName = entry.label,
-            fullType = entry.baseId
-        })
+        local display = getItemDisplayName({ name = entry.label or entry.baseId, fullType = entry.baseId })
         local label = string.format("%s (%s)", display, entry.baseId)
         self.favoritesCombo:addOptionWithData(label, entry)
     end
