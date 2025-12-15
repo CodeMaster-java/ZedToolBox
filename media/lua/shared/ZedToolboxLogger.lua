@@ -9,7 +9,7 @@ end
 
 local function buildFileName(context)
     local stamp = os.date("%Y-%m-%d_%H-%M-%S")
-    local name = string.format("error-%s-%s.txt", sanitize(context))
+    local name = string.format("error-%s-%s.txt", stamp, sanitize(context))
     return string.format("%s/%s", LOG_DIR, name), stamp
 end
 
@@ -35,17 +35,25 @@ function Logger.safeCall(context, fn, ...)
     if type(fn) ~= "function" then
         return false, "invalid function"
     end
+    local argCount = select("#", ...)
+    local args = { ... }
+    args.n = argCount
     local function handler(err)
         local stack = debug and debug.traceback and debug.traceback(err, 2) or tostring(err)
         Logger.writeError(context, err, stack)
         return err
     end
-    if xpcall then
-        return xpcall(function()
-            return fn(...)
-        end, handler)
+    local unpackArgs = table.unpack or unpack
+    local function execute()
+        if argCount > 0 then
+            return fn(unpackArgs(args, 1, args.n))
+        end
+        return fn()
     end
-    local ok, result = pcall(fn, ...)
+    if xpcall then
+        return xpcall(execute, handler)
+    end
+    local ok, result = pcall(execute)
     if not ok then
         handler(result)
     end

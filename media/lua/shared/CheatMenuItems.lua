@@ -64,9 +64,15 @@ local function buildCatalog()
     for i = 0, allItems:size() - 1 do
         local scriptItem = allItems:get(i)
         if scriptItem and scriptItem:getFullName() then
+            local rawName = scriptItem.getName and scriptItem:getName() or nil
+            local localizedName = scriptItem.getDisplayName and scriptItem:getDisplayName() or rawName
+            if not rawName or rawName == "" then
+                rawName = localizedName or scriptItem:getFullName()
+            end
             local entry = {
                 fullType = scriptItem:getFullName(),
-                name = scriptItem:getDisplayName() or scriptItem:getName() or scriptItem:getFullName()
+                name = rawName,
+                localizedName = localizedName
             }
             addEntry(catalog, categorize(scriptItem), entry)
         end

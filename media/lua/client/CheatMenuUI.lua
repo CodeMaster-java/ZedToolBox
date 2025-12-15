@@ -16,6 +16,9 @@ local PANEL_HEIGHT = 600
 local PADDING = 16
 local COLUMN_GAP = 14
 local LIST_TOP = 86
+local TAB_HEIGHT = 28
+local TAB_BUTTON_WIDTH = 160
+local TAB_GAP = 10
 local BOTTOM_HEIGHT = 190
 local LEFT_WIDTH = 180
 local CENTER_WIDTH = 440
@@ -65,6 +68,19 @@ local function getListSelection(list)
     return items[list.selected]
 end
 
+local function getCategoryLabel(category)
+    return CheatMenuText.get("UI_ZedToolbox_Category_" .. category, category)
+end
+
+local function getItemDisplayName(entry)
+    if not entry then
+        return ""
+    end
+    local key = entry.fullType and ("UI_ZedToolbox_Item_" .. entry.fullType) or nil
+    local fallback = entry.name or entry.localizedName or entry.fullType or ""
+    return CheatMenuText.get(key, fallback)
+end
+
 function CheatMenuUI:new(x, y)
     local o = ISPanel:new(x, y, PANEL_WIDTH, PANEL_HEIGHT)
     setmetatable(o, self)
@@ -76,7 +92,19 @@ function CheatMenuUI:new(x, y)
     o.selectedCategory = nil
     o.favorites = {}
     o.presets = {}
+    o.config = {}
+    o.activeTab = "items"
+    o.tabButtons = {}
+    o.tabControls = { items = {}, config = {} }
     return o
+end
+
+function CheatMenuUI:addToTab(tabId, control)
+    if not control then
+        return
+    end
+    self.tabControls[tabId] = self.tabControls[tabId] or {}
+    table.insert(self.tabControls[tabId], control)
 end
 
 function CheatMenuUI:initialise()
@@ -86,6 +114,8 @@ function CheatMenuUI:initialise()
     self:loadPersistentData()
     self:refreshFavoritesUI()
     self:refreshPresetsUI()
+    self:populateLanguageOptions()
+    self:applyTranslations()
 end
 
 function CheatMenuUI:createChildren()
@@ -96,8 +126,26 @@ function CheatMenuUI:createChildren()
     self.closeBtn:instantiate()
     self:addChild(self.closeBtn)
 
+    local tabX = PADDING
+    local tabY = PADDING
+
+    local itemsTabBtn = ISButton:new(tabX, tabY, TAB_BUTTON_WIDTH, TAB_HEIGHT, CheatMenuText.get("UI_ZedToolbox_TabItems", "Item Spawns"), self, CheatMenuUI.onTabButtonClicked)
+    itemsTabBtn.internal = "items"
+    itemsTabBtn:initialise()
+    itemsTabBtn:instantiate()
+    self:addChild(itemsTabBtn)
+    self.tabButtons.items = itemsTabBtn
+
+    local configTabX = tabX + TAB_BUTTON_WIDTH + TAB_GAP
+    local configTabBtn = ISButton:new(configTabX, tabY, TAB_BUTTON_WIDTH, TAB_HEIGHT, CheatMenuText.get("UI_ZedToolbox_TabConfig", "Config"), self, CheatMenuUI.onTabButtonClicked)
+    configTabBtn.internal = "config"
+    configTabBtn:initialise()
+    configTabBtn:instantiate()
+    self:addChild(configTabBtn)
+    self.tabButtons.config = configTabBtn
+
     local searchLabelX = PADDING
-    local searchFieldY = PADDING + 24
+    local searchFieldY = tabY + TAB_HEIGHT + TAB_GAP
     local searchFieldX = searchLabelX + SEARCH_LABEL_WIDTH + 8
     local searchWidth = math.min(SEARCH_FIELD_WIDTH, self.width - searchFieldX - PADDING)
     self.searchBox = ISTextEntryBox:new("", searchFieldX, searchFieldY, searchWidth, 22)
@@ -108,10 +156,12 @@ function CheatMenuUI:createChildren()
     end
     self:addChild(self.searchBox)
     self.searchLabelPos = { x = searchLabelX, y = searchFieldY + 3 }
+    self:addToTab("items", self.searchBox)
 
-    local listHeight = self.height - LIST_TOP - BOTTOM_HEIGHT
+    local listTop = LIST_TOP + TAB_HEIGHT + TAB_GAP
+    local listHeight = self.height - listTop - BOTTOM_HEIGHT
 
-    self.categoryList = ISScrollingListBox:new(PADDING, LIST_TOP, LEFT_WIDTH, listHeight)
+    self.categoryList = ISScrollingListBox:new(PADDING, listTop, LEFT_WIDTH, listHeight)
     self.categoryList:initialise()
     self.categoryList:instantiate()
     self.categoryList.itemheight = 24
@@ -130,8 +180,9 @@ function CheatMenuUI:createChildren()
         self:onCategoryChanged()
     end
     self:addChild(self.categoryList)
+    self:addToTab("items", self.categoryList)
 
-    self.itemsList = ISScrollingListBox:new(PADDING + LEFT_WIDTH + COLUMN_GAP, LIST_TOP, CENTER_WIDTH, listHeight)
+    self.itemsList = ISScrollingListBox:new(PADDING + LEFT_WIDTH + COLUMN_GAP, listTop, CENTER_WIDTH, listHeight)
     self.itemsList:initialise()
     self.itemsList:instantiate()
     self.itemsList.itemheight = 26
@@ -153,6 +204,7 @@ function CheatMenuUI:createChildren()
         self:onSpawnClicked()
     end
     self:addChild(self.itemsList)
+    self:addToTab("items", self.itemsList)
 
     local rightX = PADDING + LEFT_WIDTH + COLUMN_GAP + CENTER_WIDTH + COLUMN_GAP
     local dualColumnGap = COLUMN_GAP * 2
@@ -165,8 +217,8 @@ function CheatMenuUI:createChildren()
     local favoritesX = rightX
     local presetsX = favoritesX + favoritesWidth + dualColumnGap
 
-    local favoritesSectionTop = LIST_TOP - 30
-    self.favoritesCombo = ISComboBox:new(favoritesX, LIST_TOP, favoritesWidth, 24, self, nil)
+    local favoritesSectionTop = listTop - 30
+    self.favoritesCombo = ISComboBox:new(favoritesX, listTop, favoritesWidth, 24, self, nil)
     self.favoritesCombo:initialise()
     self.favoritesCombo:instantiate()
     self.favoritesCombo.onChange = function()
@@ -174,29 +226,34 @@ function CheatMenuUI:createChildren()
     end
     self:addChild(self.favoritesCombo)
     self.favoritesLabelPos = { x = favoritesX, y = self.favoritesCombo.y - 18 }
+    self:addToTab("items", self.favoritesCombo)
 
     local favBtnY = self.favoritesCombo.y + self.favoritesCombo.height + BUTTON_ROW_GAP
     self.addFavoriteBtn = ISButton:new(favoritesX, favBtnY, favoriteButtonRowWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_AddFavorite", "Add Favorite"), self, CheatMenuUI.onAddFavorite)
     self.addFavoriteBtn:initialise()
     self.addFavoriteBtn:instantiate()
     self:addChild(self.addFavoriteBtn)
+    self:addToTab("items", self.addFavoriteBtn)
 
     self.useFavoriteBtn = ISButton:new(favoritesX + favoriteButtonRowWidth + BUTTON_GAP, favBtnY, favoriteButtonRowWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_UseFavorite", "Use Favorite"), self, CheatMenuUI.onUseFavorite)
     self.useFavoriteBtn:initialise()
     self.useFavoriteBtn:instantiate()
     self:addChild(self.useFavoriteBtn)
+    self:addToTab("items", self.useFavoriteBtn)
 
     local favSecondRowY = favBtnY + BUTTON_HEIGHT + BUTTON_ROW_GAP
     self.spawnFavoriteBtn = ISButton:new(favoritesX, favSecondRowY, favoritesWidth, PRIMARY_BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_SpawnFavorite", "Spawn Favorite"), self, CheatMenuUI.onSpawnFavorite)
     self.spawnFavoriteBtn:initialise()
     self.spawnFavoriteBtn:instantiate()
     self:addChild(self.spawnFavoriteBtn)
+    self:addToTab("items", self.spawnFavoriteBtn)
 
     local favFinalRowY = self.spawnFavoriteBtn.y + self.spawnFavoriteBtn.height + BUTTON_ROW_GAP + REMOVE_BUTTON_EXTRA_GAP
     self.removeFavoriteBtn = ISButton:new(favoritesX, favFinalRowY, favoritesWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_RemoveFavorite", "Remove Favorite"), self, CheatMenuUI.onRemoveFavorite)
     self.removeFavoriteBtn:initialise()
     self.removeFavoriteBtn:instantiate()
     self:addChild(self.removeFavoriteBtn)
+    self:addToTab("items", self.removeFavoriteBtn)
 
     local favoritesSectionBottom = self.removeFavoriteBtn.y + self.removeFavoriteBtn.height + SECTION_GAP
     self.favoritesSection = {
@@ -206,13 +263,14 @@ function CheatMenuUI:createChildren()
         h = favoritesSectionBottom - favoritesSectionTop
     }
 
-    local presetNameTop = LIST_TOP
+    local presetNameTop = listTop
     self.presetNameBox = ISTextEntryBox:new("", presetsX, presetNameTop, presetsWidth, PRESET_NAME_HEIGHT)
     self.presetNameBox:initialise()
     self.presetNameBox:instantiate()
     self:addChild(self.presetNameBox)
+    self:addToTab("items", self.presetNameBox)
 
-    local presetsSectionTop = LIST_TOP - 30
+    local presetsSectionTop = listTop - 30
     local presetLabelY = self.presetNameBox.y + PRESET_NAME_HEIGHT + PRESET_NAME_GAP
     local presetComboY = presetLabelY + labelOffset
     self.presetsCombo = ISComboBox:new(presetsX, presetComboY, presetsWidth, 24, self, nil)
@@ -223,29 +281,34 @@ function CheatMenuUI:createChildren()
     end
     self:addChild(self.presetsCombo)
     self.presetsLabelPos = { x = presetsX, y = presetLabelY }
+    self:addToTab("items", self.presetsCombo)
 
     local presetBtnY = self.presetsCombo.y + self.presetsCombo.height + BUTTON_GAP
     self.savePresetBtn = ISButton:new(presetsX, presetBtnY, presetButtonRowWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_SavePreset", "Save Preset"), self, CheatMenuUI.onSavePreset)
     self.savePresetBtn:initialise()
     self.savePresetBtn:instantiate()
     self:addChild(self.savePresetBtn)
+    self:addToTab("items", self.savePresetBtn)
 
     self.applyPresetBtn = ISButton:new(presetsX + presetButtonRowWidth + BUTTON_GAP, presetBtnY, presetButtonRowWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_ApplyPreset", "Apply Preset"), self, CheatMenuUI.onApplyPreset)
     self.applyPresetBtn:initialise()
     self.applyPresetBtn:instantiate()
     self:addChild(self.applyPresetBtn)
+    self:addToTab("items", self.applyPresetBtn)
 
     local presetSecondRowY = presetBtnY + BUTTON_HEIGHT + BUTTON_ROW_GAP
     self.spawnPresetBtn = ISButton:new(presetsX, presetSecondRowY, presetsWidth, PRIMARY_BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_SpawnPreset", "Spawn Preset"), self, CheatMenuUI.onSpawnPreset)
     self.spawnPresetBtn:initialise()
     self.spawnPresetBtn:instantiate()
     self:addChild(self.spawnPresetBtn)
+    self:addToTab("items", self.spawnPresetBtn)
 
     local presetFinalRowY = self.spawnPresetBtn.y + self.spawnPresetBtn.height + BUTTON_ROW_GAP + REMOVE_BUTTON_EXTRA_GAP
     self.removePresetBtn = ISButton:new(presetsX, presetFinalRowY, presetsWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_RemovePreset", "Remove Preset"), self, CheatMenuUI.onRemovePreset)
     self.removePresetBtn:initialise()
     self.removePresetBtn:instantiate()
     self:addChild(self.removePresetBtn)
+    self:addToTab("items", self.removePresetBtn)
 
     local presetsSectionBottom = self.removePresetBtn.y + self.removePresetBtn.height + SECTION_GAP
     self.presetsSection = {
@@ -267,6 +330,7 @@ function CheatMenuUI:createChildren()
     self.baseIdBox:initialise()
     self.baseIdBox:instantiate()
     self:addChild(self.baseIdBox)
+    self:addToTab("items", self.baseIdBox)
 
     local nextRowTop = self.baseIdBox.y + self.baseIdBox.height + fieldGap
     local quantityY = nextRowTop + labelOffset
@@ -276,6 +340,7 @@ function CheatMenuUI:createChildren()
     self.quantityBox:instantiate()
     self.quantityBox:setOnlyNumbers(true)
     self:addChild(self.quantityBox)
+    self:addToTab("items", self.quantityBox)
 
     local targetGap = 18
     local targetX = self.quantityBox.x + quantityWidth + targetGap
@@ -283,10 +348,8 @@ function CheatMenuUI:createChildren()
     self.targetCombo = ISComboBox:new(targetX, quantityY, targetWidth, 26, self, nil)
     self.targetCombo:initialise()
     self.targetCombo:instantiate()
-    self.targetCombo:addOptionWithData(CheatMenuText.get("UI_ZedToolbox_TargetInventory", "Inventory"), "inventory")
-    self.targetCombo:addOptionWithData(CheatMenuText.get("UI_ZedToolbox_TargetGround", "Ground"), "ground")
-    self.targetCombo.selected = 1
     self:addChild(self.targetCombo)
+    self:addToTab("items", self.targetCombo)
 
     local spawnX = self.baseIdBox.x + self.baseIdBox.width + 16
     local spawnY = self.baseIdBox.y - 2
@@ -294,6 +357,7 @@ function CheatMenuUI:createChildren()
     self.spawnBtn:initialise()
     self.spawnBtn:instantiate()
     self:addChild(self.spawnBtn)
+    self:addToTab("items", self.spawnBtn)
 
     local bottomContentBottom = math.max(self.spawnBtn.y + self.spawnBtn.height, self.targetCombo.y + self.targetCombo.height)
     local bottomSectionBottom = bottomContentBottom + BOTTOM_PANEL_PADDING
@@ -303,12 +367,31 @@ function CheatMenuUI:createChildren()
         w = self.width - (2 * PADDING),
         h = bottomSectionBottom - bottomTop
     }
+
+    local configContentTop = listTop
+    local configComboWidth = 220
+    self.languageLabelPos = { x = PADDING, y = configContentTop - 18 }
+    self.languageCombo = ISComboBox:new(PADDING, configContentTop, configComboWidth, 24, self, nil)
+    self.languageCombo:initialise()
+    self.languageCombo:instantiate()
+    self:addChild(self.languageCombo)
+    self:addToTab("config", self.languageCombo)
+
+    local applyBtnX = PADDING + configComboWidth + BUTTON_GAP
+    self.applyLanguageBtn = ISButton:new(applyBtnX, configContentTop, 120, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_Apply", "Apply"), self, CheatMenuUI.onApplyLanguage)
+    self.applyLanguageBtn:initialise()
+    self.applyLanguageBtn:instantiate()
+    self:addChild(self.applyLanguageBtn)
+    self:addToTab("config", self.applyLanguageBtn)
+
+    self:setActiveTab(self.activeTab)
 end
 
 function CheatMenuUI:getModData()
     local data = ModData.getOrCreate(MODDATA_KEY)
     data.favorites = data.favorites or {}
     data.presets = data.presets or {}
+    data.config = data.config or {}
     return data
 end
 
@@ -316,12 +399,168 @@ function CheatMenuUI:loadPersistentData()
     local data = self:getModData()
     self.favorites = data.favorites
     self.presets = data.presets
+    self.config = data.config or {}
+    local preferredLanguage = self.config.language or CheatMenuText.getCurrentLanguage() or CheatMenuText.getDefaultLanguage()
+    CheatMenuText.setLanguage(preferredLanguage)
+    self.config.language = CheatMenuText.getCurrentLanguage()
+end
+
+function CheatMenuUI:setActiveTab(tabId)
+    local target = tabId or "items"
+    if not self.tabControls[target] then
+        target = "items"
+    end
+    self.activeTab = target
+
+    for id, controls in pairs(self.tabControls) do
+        local visible = id == target
+        for _, control in ipairs(controls) do
+            if control.setVisible then
+                control:setVisible(visible)
+            else
+                control.visible = visible
+            end
+            if control.clearStencil then
+                control:clearStencil()
+            end
+        end
+    end
+
+    for id, button in pairs(self.tabButtons) do
+        local isActive = id == target
+        if button.setEnable then
+            button:setEnable(not isActive)
+        else
+            button.enable = not isActive
+        end
+    end
+end
+
+function CheatMenuUI:onTabButtonClicked(button)
+    if not button or not button.internal then
+        return
+    end
+    if button.internal ~= self.activeTab then
+        self:setActiveTab(button.internal)
+    end
+end
+
+function CheatMenuUI:onApplyLanguage()
+    if not self.languageCombo or not self.languageCombo.options then
+        return
+    end
+    local option = self.languageCombo.options[self.languageCombo.selected]
+    if not option or not option.data then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusLanguageMissing", "Select a language first."))
+        return
+    end
+    local previous = self.config and self.config.language or CheatMenuText.getCurrentLanguage()
+    CheatMenuText.setLanguage(option.data)
+    self.config = self.config or {}
+    self.config.language = CheatMenuText.getCurrentLanguage()
+    self:flushPersistentData()
+    self:populateLanguageOptions(self.config.language)
+    local selectedItem = getListSelection(self.itemsList)
+    local selectedFullType = selectedItem and selectedItem.item and selectedItem.item.fullType or nil
+    CheatMenuItems.refresh()
+    self:refreshCatalog()
+    if selectedFullType then
+        self:selectItemByFullType(selectedFullType)
+    end
+    self:refreshFavoritesUI()
+    self:refreshPresetsUI()
+    self:applyTranslations()
+    local changed = self.config.language ~= previous
+    local messageKey = changed and "UI_ZedToolbox_StatusLanguageApplied" or "UI_ZedToolbox_StatusLanguageApplied"
+    self:setStatus(true, CheatMenuText.get(messageKey, "Language updated."))
+end
+
+function CheatMenuUI:populateLanguageOptions(selectedId)
+    if not self.languageCombo then
+        return
+    end
+    local targetId = selectedId or (self.config and self.config.language) or CheatMenuText.getCurrentLanguage()
+    local options = CheatMenuText.getLanguages()
+    self.languageCombo:clear()
+    local fallbackIndex = 1
+    for index, entry in ipairs(options) do
+        self.languageCombo:addOptionWithData(entry.label, entry.id)
+        if entry.id == targetId then
+            fallbackIndex = index
+        end
+    end
+    self.languageCombo.selected = fallbackIndex
+end
+
+function CheatMenuUI:refreshTargetCombo()
+    if not self.targetCombo then
+        return
+    end
+    local previous = self:getTargetSelection()
+    self.targetCombo:clear()
+    self.targetCombo:addOptionWithData(CheatMenuText.get("UI_ZedToolbox_TargetInventory", "Inventory"), "inventory")
+    self.targetCombo:addOptionWithData(CheatMenuText.get("UI_ZedToolbox_TargetGround", "Ground"), "ground")
+    self:setTargetSelection(previous)
+end
+
+function CheatMenuUI:applyTranslations()
+    if self.tabButtons.items then
+        self.tabButtons.items:setTitle(CheatMenuText.get("UI_ZedToolbox_TabItems", "Item Spawns"))
+    end
+    if self.tabButtons.config then
+        self.tabButtons.config:setTitle(CheatMenuText.get("UI_ZedToolbox_TabConfig", "Config"))
+    end
+    if self.addFavoriteBtn then
+        self.addFavoriteBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_AddFavorite", "Add Favorite"))
+    end
+    if self.useFavoriteBtn then
+        self.useFavoriteBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_UseFavorite", "Use Favorite"))
+    end
+    if self.spawnFavoriteBtn then
+        self.spawnFavoriteBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_SpawnFavorite", "Spawn Favorite"))
+    end
+    if self.removeFavoriteBtn then
+        self.removeFavoriteBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_RemoveFavorite", "Remove Favorite"))
+    end
+    if self.savePresetBtn then
+        self.savePresetBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_SavePreset", "Save Preset"))
+    end
+    if self.applyPresetBtn then
+        self.applyPresetBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_ApplyPreset", "Apply Preset"))
+    end
+    if self.spawnPresetBtn then
+        self.spawnPresetBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_SpawnPreset", "Spawn Preset"))
+    end
+    if self.removePresetBtn then
+        self.removePresetBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_RemovePreset", "Remove Preset"))
+    end
+    if self.spawnBtn then
+        self.spawnBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Spawn", "Spawn"))
+    end
+    if self.applyLanguageBtn then
+        self.applyLanguageBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Apply", "Apply"))
+    end
+    self:refreshTargetCombo()
+    self:refreshCategoryLabels()
+    self:populateLanguageOptions(self.config and self.config.language)
+end
+
+function CheatMenuUI:refreshCategoryLabels()
+    if not self.categoryList or not self.categoryList.items then
+        return
+    end
+    for _, item in ipairs(self.categoryList.items) do
+        if item and item.item then
+            item.text = getCategoryLabel(item.item)
+        end
+    end
 end
 
 function CheatMenuUI:flushPersistentData()
     local data = self:getModData()
     data.favorites = self.favorites
     data.presets = self.presets
+    data.config = self.config
     if ModData.transmit then
         ModData.transmit(MODDATA_KEY)
     end
@@ -341,13 +580,13 @@ function CheatMenuUI:populateCategories()
     for _, category in ipairs(order) do
         if not added[category] then
             self.catalog[category] = self.catalog[category] or {}
-            self.categoryList:addItem(category, category)
+            self.categoryList:addItem(getCategoryLabel(category), category)
             added[category] = true
         end
     end
     if not added.Misc then
         self.catalog.Misc = self.catalog.Misc or {}
-        self.categoryList:addItem("Misc", "Misc")
+        self.categoryList:addItem(getCategoryLabel("Misc"), "Misc")
     end
     self.categoryList.selected = 1
     if previous then
@@ -371,10 +610,11 @@ function CheatMenuUI:applyFilters()
     local list = self.catalog[category] or {}
     local query = self:getSearchText()
     for _, entry in ipairs(list) do
-        local nameMatch = query == "" or string.find(lower(entry.name), query, 1, true)
+        local displayName = getItemDisplayName(entry)
+        local nameMatch = query == "" or string.find(lower(displayName), query, 1, true) or string.find(lower(entry.name or ""), query, 1, true)
         local idMatch = query ~= "" and string.find(lower(entry.fullType), query, 1, true)
         if nameMatch or idMatch then
-            local label = string.format("%s (%s)", entry.name, entry.fullType)
+            local label = string.format("%s (%s)", displayName, entry.fullType)
             self.itemsList:addItem(label, entry)
         end
     end
@@ -392,7 +632,12 @@ function CheatMenuUI:refreshFavoritesUI()
     end
     self.favoritesCombo:clear()
     for _, entry in ipairs(self.favorites or {}) do
-        local label = string.format("%s (%s)", entry.label or entry.baseId, entry.baseId)
+        local display = getItemDisplayName({
+            name = entry.label or entry.baseId,
+            localizedName = entry.label,
+            fullType = entry.baseId
+        })
+        local label = string.format("%s (%s)", display, entry.baseId)
         self.favoritesCombo:addOptionWithData(label, entry)
     end
     if self.favoritesCombo.options and #self.favoritesCombo.options > 0 then
@@ -431,6 +676,20 @@ function CheatMenuUI:onItemSelected()
     local selected = getListSelection(self.itemsList)
     if selected and selected.item then
         self.baseIdBox:setText(selected.item.fullType)
+    end
+end
+
+function CheatMenuUI:selectItemByFullType(fullType)
+    if not fullType or not self.itemsList or not self.itemsList.items then
+        return
+    end
+    for index, entry in ipairs(self.itemsList.items) do
+        local value = entry.item or entry.data
+        if value and value.fullType == fullType then
+            self.itemsList.selected = index
+            self:onItemSelected()
+            return
+        end
     end
 end
 
@@ -489,8 +748,8 @@ function CheatMenuUI:onAddFavorite()
             return
         end
     end
-    local label = baseId
     local selected = getListSelection(self.itemsList)
+    local label
     if selected and selected.item and selected.item.fullType == baseId then
         label = selected.item.name
     end
@@ -637,7 +896,12 @@ function CheatMenuUI:show()
     self:loadPersistentData()
     self:refreshFavoritesUI()
     self:refreshPresetsUI()
-    self.searchBox:focus()
+    self:populateLanguageOptions(self.config and self.config.language)
+    self:applyTranslations()
+    self:setActiveTab(self.activeTab)
+    if self.activeTab == "items" then
+        self.searchBox:focus()
+    end
 end
 
 function CheatMenuUI:close()
@@ -666,9 +930,11 @@ function CheatMenuUI:prerender()
         panel:drawRectBorder(section.x, section.y, section.w, section.h, SECTION_BORDER_ALPHA, 0.6, 0.6, 0.6)
     end
 
-    drawSection(self, self.favoritesSection)
-    drawSection(self, self.presetsSection)
-    drawSection(self, self.bottomSection)
+    if self.activeTab == "items" then
+        drawSection(self, self.favoritesSection)
+        drawSection(self, self.presetsSection)
+        drawSection(self, self.bottomSection)
+    end
 
     if self.status.message ~= "" then
         self:drawText(self.status.message, PADDING, self.height - 36, self.status.color.r, self.status.color.g, self.status.color.b, 1, UIFont.Small)
@@ -677,21 +943,30 @@ function CheatMenuUI:prerender()
     self:drawTextRight(CREDIT_TEXT, self.width - PADDING, self.height - 20, 0.7, 0.7, 0.7, 1, UIFont.Small)
 
     self:drawTextCentre(CheatMenuText.get("UI_ZedToolbox_Title", "Zed Tool"), self.width / 2, 12, 1, 1, 1, 1, UIFont.Medium)
-    if self.searchLabelPos then
+    if self.activeTab == "items" and self.searchLabelPos then
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Search", "Search"), self.searchLabelPos.x, self.searchLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
     end
-    self:drawText(CheatMenuText.get("UI_ZedToolbox_Categories", "Categories"), self.categoryList.x, self.categoryList.y - 20, 0.8, 0.8, 0.8, 1, UIFont.Small)
-    self:drawText(CheatMenuText.get("UI_ZedToolbox_Items", "Items"), self.itemsList.x, self.itemsList.y - 20, 0.8, 0.8, 0.8, 1, UIFont.Small)
-    if self.favoritesLabelPos then
+    if self.activeTab == "items" then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Categories", "Categories"), self.categoryList.x, self.categoryList.y - 20, 0.8, 0.8, 0.8, 1, UIFont.Small)
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Items", "Items"), self.itemsList.x, self.itemsList.y - 20, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
+    if self.activeTab == "items" and self.favoritesLabelPos then
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Favorites", "Favorites"), self.favoritesLabelPos.x, self.favoritesLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
     end
-    self:drawText(CheatMenuText.get("UI_ZedToolbox_PresetName", "Preset Name"), self.presetNameBox.x, self.presetNameBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
-    if self.presetsLabelPos then
+    if self.activeTab == "items" then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_PresetName", "Preset Name"), self.presetNameBox.x, self.presetNameBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
+    if self.activeTab == "items" and self.presetsLabelPos then
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Presets", "Presets"), self.presetsLabelPos.x, self.presetsLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
     end
-    self:drawText(CheatMenuText.get("UI_ZedToolbox_BaseId", "Base ID"), self.baseIdBox.x, self.baseIdBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
-    self:drawText(CheatMenuText.get("UI_ZedToolbox_Quantity", "Quantity"), self.quantityBox.x, self.quantityBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
-    self:drawText(CheatMenuText.get("UI_ZedToolbox_Target", "Target"), self.targetCombo.x, self.targetCombo.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    if self.activeTab == "items" then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_BaseId", "Base ID"), self.baseIdBox.x, self.baseIdBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Quantity", "Quantity"), self.quantityBox.x, self.quantityBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Target", "Target"), self.targetCombo.x, self.targetCombo.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
+    if self.activeTab == "config" and self.languageLabelPos then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_ConfigLanguage", "Language"), self.languageLabelPos.x, self.languageLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
 end
 
 local GUARD_METHODS = {
