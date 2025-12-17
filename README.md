@@ -97,10 +97,17 @@
 - **Quantity validation**: Safe range (1–100) prevents accidental crashes
 - **Smart error handling**: Comprehensive validation and feedback
 
+### 🛡️ Survival Utilities
+- **God Mode toggle**: Keep health, stats, and injuries fully topped up
+- **Hit Kill option**: Drop any zombie or NPC with a single strike
+- **Speed multiplier**: Dial in sprint and movement speed on the fly
+- **Persistent settings**: Utilities remember their state between sessions
+
 ### 🎨 Polished Interface
 - **Drag-and-drop panels**: Intuitive window management
 - **Visual feedback**: Success/error indicators and highlighted selections
 - **Responsive design**: Optimized for different screen sizes
+- **Compact tab selector**: Dropdown tabs scale gracefully as features grow
 
 ### ⚙️ Config Hub
 - **Hotkey picker**: Change the toggle key without leaving the game

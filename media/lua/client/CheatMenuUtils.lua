@@ -122,7 +122,14 @@ local function ensurePlayerState(player)
     elseif state.godMode then
         maintainStats(player)
     end
-    if state.forceRefresh or math.abs(state.lastSpeedMultiplier - state.speedMultiplier) > 0.001 then
+    local needsSpeedUpdate = state.forceRefresh or math.abs(state.lastSpeedMultiplier - state.speedMultiplier) > 0.001
+    if not needsSpeedUpdate and state.speedMultiplier ~= 1 then
+        needsSpeedUpdate = true
+    end
+    if not needsSpeedUpdate and math.abs(state.lastSpeedMultiplier - 1) > 0.001 then
+        needsSpeedUpdate = true
+    end
+    if needsSpeedUpdate then
         state.lastSpeedMultiplier = state.speedMultiplier
         applySpeed(player)
     end
