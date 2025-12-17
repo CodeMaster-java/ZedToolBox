@@ -8,6 +8,7 @@ local CheatMenuItems = require "CheatMenuItems"
 local CheatMenuSpawner = require "CheatMenuSpawner"
 local CheatMenuText = require "CheatMenuText"
 local CheatMenuLogger = require "CheatMenuLogger"
+local CheatMenuUtils = require "CheatMenuUtils"
 
 local CheatMenuUI = ISPanel:derive("CheatMenuUI")
 
@@ -123,6 +124,17 @@ local function trim(text)
     return (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
+local function clamp(value, minValue, maxValue)
+    local number = tonumber(value) or 0
+    if number < minValue then
+        return minValue
+    end
+    if number > maxValue then
+        return maxValue
+    end
+    return number
+end
+
 local function getListSelection(list)
     if not list then
         return nil
@@ -157,8 +169,16 @@ function CheatMenuUI:new(x, y)
     o.presets = {}
     o.config = {}
     o.activeTab = "items"
+    o.tabSelector = nil
     o.tabButtons = {}
-    o.tabControls = { items = {}, config = {} }
+    o.tabDefinitions = {
+        { id = "items", labelKey = "UI_ZedToolbox_TabItems", fallback = "Item Spawns" },
+        { id = "utils", labelKey = "UI_ZedToolbox_TabUtils", fallback = "Utils" },
+        { id = "config", labelKey = "UI_ZedToolbox_TabConfig", fallback = "Config" }
+    }
+    o.tabControls = { items = {}, utils = {}, config = {} }
+    o.utilsSpeedValues = { 1, 1.5, 2, 3, 4, 5 }
+    o.utilsLabelPositions = {}
     return o
 end
 
@@ -168,6 +188,151 @@ function CheatMenuUI:addToTab(tabId, control)
     end
     self.tabControls[tabId] = self.tabControls[tabId] or {}
     table.insert(self.tabControls[tabId], control)
+end
+
+function CheatMenuUI:populateTabSelector(selectedId)
+    if not self.tabSelector then
+        return
+    end
+    local target = selectedId or self.activeTab or "items"
+    local fallbackIndex = 1
+    if self.tabSelector.clear then
+        self.tabSelector:clear()
+    end
+    for index, definition in ipairs(self.tabDefinitions or {}) do
+        local label = CheatMenuText.get(definition.labelKey, definition.fallback)
+        if self.tabSelector.addOptionWithData then
+            self.tabSelector:addOptionWithData(label, definition.id)
+        else
+            self.tabSelector:addOption(label)
+        end
+        if definition.id == target then
+            fallbackIndex = index
+        end
+    end
+    self.isUpdatingTabSelector = true
+    self.tabSelector.selected = fallbackIndex
+    self.isUpdatingTabSelector = false
+end
+
+function CheatMenuUI:onTabSelectionChanged(combo)
+    if self.isUpdatingTabSelector then
+        return
+    end
+    local source = combo or self.tabSelector
+    if not source or not source.options then
+        return
+    end
+    local index = source.selected or 1
+    local option = source.options[index]
+    local targetId = option and option.data
+    if not targetId and self.tabDefinitions then
+        local definition = self.tabDefinitions[index]
+        targetId = definition and definition.id or targetId
+    end
+    if targetId and targetId ~= self.activeTab then
+        self:setActiveTab(targetId)
+    end
+end
+
+function CheatMenuUI:ensureUtilsConfig()
+    self.config = self.config or {}
+    local raw = type(self.config.utils) == "table" and self.config.utils or {}
+    local speedValue = tonumber(raw.speedMultiplier) or 1
+    local speedClamped = clamp(speedValue, 0.5, 5)
+    local normalized = {
+        godMode = raw.godMode and true or false,
+        hitKill = raw.hitKill and true or false,
+        speedMultiplier = speedClamped
+    }
+    local changed = raw.godMode ~= normalized.godMode or raw.hitKill ~= normalized.hitKill or math.abs(speedValue - speedClamped) > 0.001
+    self.config.utils = normalized
+    CheatMenuUtils.applyConfig(normalized)
+    return changed
+end
+
+function CheatMenuUI:populateToggleCombo(combo, enabled)
+    if not combo then
+        return
+    end
+    local selected = enabled and true or false
+    if combo.clear then
+        combo:clear()
+    end
+    if combo.addOptionWithData then
+        combo:addOptionWithData(CheatMenuText.get("UI_ZedToolbox_Utils_Disabled", "Disabled"), false)
+        combo:addOptionWithData(CheatMenuText.get("UI_ZedToolbox_Utils_Enabled", "Enabled"), true)
+    else
+        combo:addOption(CheatMenuText.get("UI_ZedToolbox_Utils_Disabled", "Disabled"))
+        combo:addOption(CheatMenuText.get("UI_ZedToolbox_Utils_Enabled", "Enabled"))
+    end
+    combo.selected = selected and 2 or 1
+end
+
+function CheatMenuUI:populateSpeedCombo(multiplier)
+    if not self.speedCombo then
+        return
+    end
+    local current = clamp(multiplier or 1, 0.5, 5)
+    if self.speedCombo.clear then
+        self.speedCombo:clear()
+    end
+    local fallbackIndex = 1
+    for index, value in ipairs(self.utilsSpeedValues or {}) do
+        local label = CheatMenuText.get("UI_ZedToolbox_Utils_SpeedValue", "%1x", value)
+        self.speedCombo:addOptionWithData(label, value)
+        if math.abs(value - current) < 0.001 then
+            fallbackIndex = index
+        end
+    end
+    self.speedCombo.selected = fallbackIndex
+end
+
+function CheatMenuUI:populateUtilsOptions()
+    local utils = (self.config and self.config.utils) or { godMode = false, hitKill = false, speedMultiplier = 1 }
+    self:populateToggleCombo(self.godModeCombo, utils.godMode)
+    self:populateToggleCombo(self.hitKillCombo, utils.hitKill)
+    self:populateSpeedCombo(utils.speedMultiplier)
+end
+
+function CheatMenuUI:syncUtilsUI()
+    local utils = (self.config and self.config.utils) or { godMode = false, hitKill = false, speedMultiplier = 1 }
+    if self.godModeCombo and self.godModeCombo.options then
+        for index, option in ipairs(self.godModeCombo.options) do
+            if option.data == (utils.godMode and true or false) then
+                self.godModeCombo.selected = index
+                break
+            end
+        end
+    end
+    if self.hitKillCombo and self.hitKillCombo.options then
+        for index, option in ipairs(self.hitKillCombo.options) do
+            if option.data == (utils.hitKill and true or false) then
+                self.hitKillCombo.selected = index
+                break
+            end
+        end
+    end
+    if self.speedCombo and self.speedCombo.options then
+        local target = clamp(utils.speedMultiplier or 1, 0.5, 5)
+        for index, option in ipairs(self.speedCombo.options) do
+            if math.abs((option.data or 0) - target) < 0.001 then
+                self.speedCombo.selected = index
+                break
+            end
+        end
+    end
+end
+
+function CheatMenuUI:updateUtilsConfig(field, value)
+    self.config = self.config or {}
+    self.config.utils = self.config.utils or {}
+    local changed = self.config.utils[field] ~= value
+    self.config.utils[field] = value
+    if changed then
+        self:flushPersistentData()
+    end
+    return changed
 end
 
 function CheatMenuUI:initialise()
@@ -193,20 +358,14 @@ function CheatMenuUI:createChildren()
     local tabX = PADDING
     local tabY = PADDING
 
-    local itemsTabBtn = ISButton:new(tabX, tabY, TAB_BUTTON_WIDTH, TAB_HEIGHT, CheatMenuText.get("UI_ZedToolbox_TabItems", "Item Spawns"), self, CheatMenuUI.onTabButtonClicked)
-    itemsTabBtn.internal = "items"
-    itemsTabBtn:initialise()
-    itemsTabBtn:instantiate()
-    self:addChild(itemsTabBtn)
-    self.tabButtons.items = itemsTabBtn
-
-    local configTabX = tabX + TAB_BUTTON_WIDTH + TAB_GAP
-    local configTabBtn = ISButton:new(configTabX, tabY, TAB_BUTTON_WIDTH, TAB_HEIGHT, CheatMenuText.get("UI_ZedToolbox_TabConfig", "Config"), self, CheatMenuUI.onTabButtonClicked)
-    configTabBtn.internal = "config"
-    configTabBtn:initialise()
-    configTabBtn:instantiate()
-    self:addChild(configTabBtn)
-    self.tabButtons.config = configTabBtn
+    self.tabSelector = ISComboBox:new(tabX, tabY, TAB_BUTTON_WIDTH, TAB_HEIGHT, self, nil)
+    self.tabSelector:initialise()
+    self.tabSelector:instantiate()
+    self.tabSelector.onChange = function()
+        self:onTabSelectionChanged()
+    end
+    self:addChild(self.tabSelector)
+    self:populateTabSelector(self.activeTab)
 
     local searchLabelX = PADDING
     local searchFieldY = tabY + TAB_HEIGHT + TAB_GAP
@@ -432,6 +591,52 @@ function CheatMenuUI:createChildren()
         h = bottomSectionBottom - bottomTop
     }
 
+    local utilsSectionTop = listTop - 30
+    local utilsComboWidth = 220
+    local utilsSpacing = 58
+    local utilsX = PADDING
+
+    local godModeY = listTop
+    self.utilsLabelPositions.godMode = { x = utilsX, y = godModeY - 18 }
+    self.godModeCombo = ISComboBox:new(utilsX, godModeY, utilsComboWidth, 24, self, nil)
+    self.godModeCombo:initialise()
+    self.godModeCombo:instantiate()
+    self.godModeCombo.onChange = function()
+        self:onGodModeChanged()
+    end
+    self:addChild(self.godModeCombo)
+    self:addToTab("utils", self.godModeCombo)
+
+    local hitKillY = godModeY + utilsSpacing
+    self.utilsLabelPositions.hitKill = { x = utilsX, y = hitKillY - 18 }
+    self.hitKillCombo = ISComboBox:new(utilsX, hitKillY, utilsComboWidth, 24, self, nil)
+    self.hitKillCombo:initialise()
+    self.hitKillCombo:instantiate()
+    self.hitKillCombo.onChange = function()
+        self:onHitKillChanged()
+    end
+    self:addChild(self.hitKillCombo)
+    self:addToTab("utils", self.hitKillCombo)
+
+    local speedY = hitKillY + utilsSpacing
+    self.utilsLabelPositions.speed = { x = utilsX, y = speedY - 18 }
+    self.speedCombo = ISComboBox:new(utilsX, speedY, utilsComboWidth, 24, self, nil)
+    self.speedCombo:initialise()
+    self.speedCombo:instantiate()
+    self.speedCombo.onChange = function()
+        self:onSpeedChanged()
+    end
+    self:addChild(self.speedCombo)
+    self:addToTab("utils", self.speedCombo)
+
+    local utilsSectionBottom = self.speedCombo.y + self.speedCombo.height + 40
+    self.utilsSection = {
+        x = utilsX - 8,
+        y = utilsSectionTop,
+        w = self.width - (2 * PADDING) + 16,
+        h = utilsSectionBottom - utilsSectionTop
+    }
+
     local configContentTop = listTop
     local configComboWidth = 220
     self.languageLabelPos = { x = PADDING, y = configContentTop - 18 }
@@ -479,6 +684,10 @@ function CheatMenuUI:loadPersistentData()
     self.presets = data.presets
     self.config = data.config or {}
     local needsFlush = false
+    local utilsChanged = self:ensureUtilsConfig()
+    if utilsChanged then
+        needsFlush = true
+    end
     local toggleKey = tonumber(self.config.toggleKey)
     if not toggleKey then
         toggleKey = self:getDefaultToggleKey()
@@ -526,13 +735,8 @@ function CheatMenuUI:setActiveTab(tabId)
         end
     end
 
-    for id, button in pairs(self.tabButtons) do
-        local isActive = id == target
-        if button.setEnable then
-            button:setEnable(not isActive)
-        else
-            button.enable = not isActive
-        end
+    if self.tabSelector then
+        self:populateTabSelector(target)
     end
 end
 
@@ -598,6 +802,44 @@ function CheatMenuUI:onApplyHotkey()
     self:setStatus(true, CheatMenuText.get(messageKey, "Hotkey updated."))
 end
 
+function CheatMenuUI:onGodModeChanged()
+    if not self.godModeCombo or not self.godModeCombo.options then
+        return
+    end
+    local option = self.godModeCombo.options[self.godModeCombo.selected]
+    local enabled = option and option.data and true or false
+    self:updateUtilsConfig("godMode", enabled)
+    CheatMenuUtils.setGodMode(enabled)
+    local messageKey = enabled and "UI_ZedToolbox_StatusGodModeOn" or "UI_ZedToolbox_StatusGodModeOff"
+    self:setStatus(true, CheatMenuText.get(messageKey, enabled and "God Mode enabled." or "God Mode disabled."))
+    self:syncUtilsUI()
+end
+
+function CheatMenuUI:onHitKillChanged()
+    if not self.hitKillCombo or not self.hitKillCombo.options then
+        return
+    end
+    local option = self.hitKillCombo.options[self.hitKillCombo.selected]
+    local enabled = option and option.data and true or false
+    self:updateUtilsConfig("hitKill", enabled)
+    CheatMenuUtils.setHitKill(enabled)
+    local messageKey = enabled and "UI_ZedToolbox_StatusHitKillOn" or "UI_ZedToolbox_StatusHitKillOff"
+    self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Hit Kill enabled." or "Hit Kill disabled."))
+    self:syncUtilsUI()
+end
+
+function CheatMenuUI:onSpeedChanged()
+    if not self.speedCombo or not self.speedCombo.options then
+        return
+    end
+    local option = self.speedCombo.options[self.speedCombo.selected]
+    local multiplier = clamp(option and option.data or 1, 0.5, 5)
+    self:updateUtilsConfig("speedMultiplier", multiplier)
+    CheatMenuUtils.setSpeedMultiplier(multiplier)
+    self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSpeedApplied", "Speed set to %1x.", multiplier))
+    self:syncUtilsUI()
+end
+
 function CheatMenuUI:populateLanguageOptions(selectedId)
     if not self.languageCombo then
         return
@@ -645,12 +887,7 @@ function CheatMenuUI:refreshTargetCombo()
 end
 
 function CheatMenuUI:applyTranslations()
-    if self.tabButtons.items then
-        self.tabButtons.items:setTitle(CheatMenuText.get("UI_ZedToolbox_TabItems", "Item Spawns"))
-    end
-    if self.tabButtons.config then
-        self.tabButtons.config:setTitle(CheatMenuText.get("UI_ZedToolbox_TabConfig", "Config"))
-    end
+    self:populateTabSelector(self.activeTab)
     if self.addFavoriteBtn then
         self.addFavoriteBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_AddFavorite", "Add Favorite"))
     end
@@ -686,8 +923,10 @@ function CheatMenuUI:applyTranslations()
     end
     self:refreshTargetCombo()
     self:refreshCategoryLabels()
+    self:populateUtilsOptions()
     self:populateLanguageOptions(self.config and self.config.language)
     self:populateHotkeyOptions(self.config and self.config.toggleKey)
+    self:syncUtilsUI()
 end
 
 function CheatMenuUI:refreshCategoryLabels()
@@ -1076,6 +1315,8 @@ function CheatMenuUI:prerender()
         drawSection(self, self.favoritesSection)
         drawSection(self, self.presetsSection)
         drawSection(self, self.bottomSection)
+    elseif self.activeTab == "utils" then
+        drawSection(self, self.utilsSection)
     end
 
     if self.status.message ~= "" then
@@ -1106,6 +1347,15 @@ function CheatMenuUI:prerender()
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Quantity", "Quantity"), self.quantityBox.x, self.quantityBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Target", "Target"), self.targetCombo.x, self.targetCombo.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
     end
+    if self.activeTab == "utils" and self.utilsLabelPositions.godMode then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_GodMode", "God Mode"), self.utilsLabelPositions.godMode.x, self.utilsLabelPositions.godMode.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
+    if self.activeTab == "utils" and self.utilsLabelPositions.hitKill then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_HitKill", "Hit Kill"), self.utilsLabelPositions.hitKill.x, self.utilsLabelPositions.hitKill.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
+    if self.activeTab == "utils" and self.utilsLabelPositions.speed then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_Speed", "Speed"), self.utilsLabelPositions.speed.x, self.utilsLabelPositions.speed.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
     if self.activeTab == "config" and self.languageLabelPos then
         self:drawText(CheatMenuText.get("UI_ZedToolbox_ConfigLanguage", "Language"), self.languageLabelPos.x, self.languageLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
     end
@@ -1129,7 +1379,10 @@ local GUARD_METHODS = {
     "onSpawnPreset",
     "onRemovePreset",
     "onApplyHotkey",
-    "onSpawnClicked"
+    "onSpawnClicked",
+    "onGodModeChanged",
+    "onHitKillChanged",
+    "onSpeedChanged"
 }
 
 for _, methodName in ipairs(GUARD_METHODS) do
