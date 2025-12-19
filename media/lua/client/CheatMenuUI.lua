@@ -81,6 +81,14 @@ local HOTKEY_SOURCE = {
 
 local HOTKEY_OPTIONS_CACHE = nil
 
+local function clamp(value, min, max)
+    value = tonumber(value) or min
+    if value < min then return min end
+    if value > max then return max end
+    return value
+end
+
+
 local function getHotkeyOptions()
     if not HOTKEY_OPTIONS_CACHE then
         HOTKEY_OPTIONS_CACHE = {}
@@ -124,36 +132,281 @@ local function trim(text)
     return (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
 end
 
-local function clamp(value, minValue, maxValue)
-    local number = tonumber(value) or 0
-    if number < minValue then
-        return minValue
+local function clearControl(control)
+    if not control then
+        return
     end
-    if number > maxValue then
-        return maxValue
+    if type(control.clear) == "function" then
+        control:clear()
+        return
     end
-    return number
+    if type(control.clearItems) == "function" then
+        control:clearItems()
+        return
+    end
+    if control.items then
+        control.items = {}
+    end
+    if control.options then
+        control.options = {}
+    end
+    control.selected = 0
+    if type(control.setScrollHeight) == "function" then
+        control:setScrollHeight(0)
+    end
 end
 
 local function getListSelection(list)
-    if not list then
+    if not list or not list.items then
         return nil
     end
-    local items = list.items or {}
-    return items[list.selected]
-end
-
-local function getCategoryLabel(category)
-    return CheatMenuText.get("UI_ZedToolbox_Category_" .. category, category)
+    local index = list.selected or 0
+    if index < 1 then
+        return nil
+    end
+    return list.items[index]
 end
 
 local function getItemDisplayName(entry)
     if not entry then
         return ""
     end
-    local key = entry.fullType and ("UI_ZedToolbox_Item_" .. entry.fullType) or nil
-    local fallback = entry.name or entry.fullType or ""
+    if entry.localizedName and entry.localizedName ~= "" then
+        return entry.localizedName
+    end
+    if entry.name and entry.name ~= "" then
+        return entry.name
+    end
+    local fullType = entry.fullType or entry.baseId
+    if fullType and ScriptManager and ScriptManager.instance then
+        local scriptItem = ScriptManager.instance:FindItem(fullType)
+        if scriptItem then
+            local display = scriptItem.getDisplayName and scriptItem:getDisplayName()
+            if display and display ~= "" then
+                return display
+            end
+            local rawName = scriptItem.getName and scriptItem:getName()
+            if rawName and rawName ~= "" then
+                return rawName
+            end
+            local fullName = scriptItem.getFullName and scriptItem:getFullName()
+            if fullName and fullName ~= "" then
+                return fullName
+            end
+        end
+    end
+    return tostring(fullType or "")
+end
+
+local CATEGORY_LABEL_FALLBACKS = {
+    Weapons = "Weapons",
+    Ammo = "Ammo",
+    Bags = "Bags",
+    Food = "Food",
+    Medical = "Medical",
+    Misc = "Misc"
+}
+
+local function getCategoryLabel(category)
+    local normalized = CATEGORY_LABEL_FALLBACKS[category] and category or "Misc"
+    local fallback = CATEGORY_LABEL_FALLBACKS[normalized] or tostring(category or "Misc")
+    local key = string.format("UI_ZedToolbox_Category_%s", normalized)
     return CheatMenuText.get(key, fallback)
+end
+
+local CheatMenuTutorialPanel = ISPanel:derive("CheatMenuTutorialPanel")
+
+local function wrapTutorialText(font, text, maxWidth)
+    local tm = getTextManager and getTextManager()
+    if not tm or maxWidth <= 0 then
+        return { text or "" }
+    end
+    local lines = {}
+    local current = ""
+    for word in tostring(text or ""):gmatch("%S+") do
+        local candidate = current ~= "" and (current .. " " .. word) or word
+        if tm:MeasureStringX(font, candidate) > maxWidth and current ~= "" then
+            table.insert(lines, current)
+            current = word
+        else
+            current = candidate
+        end
+    end
+    if current ~= "" then
+        table.insert(lines, current)
+    end
+    if #lines == 0 then
+        table.insert(lines, "")
+    end
+    return lines
+end
+
+function CheatMenuTutorialPanel:new(x, y, width, height)
+    local o = ISPanel:new(x, y, width, height)
+    setmetatable(o, self)
+    self.__index = self
+    o:noBackground()
+    o.borderColor = { r = 1, g = 1, b = 1, a = 0 }
+    o.padding = 18
+    o.scrollY = 0
+    o.sections = {}
+    o.lines = {}
+    o.contentHeight = 0
+    return o
+end
+
+function CheatMenuTutorialPanel:setWidth(width)
+    if width == self.width then
+        return
+    end
+    ISPanel.setWidth(self, width)
+    self:rebuild()
+end
+
+function CheatMenuTutorialPanel:setHeight(height)
+    if height == self.height then
+        return
+    end
+    ISPanel.setHeight(self, height)
+    self:rebuild()
+end
+
+function CheatMenuTutorialPanel:setSections(sections)
+    self.sections = sections or {}
+    self.scrollY = 0
+    self:rebuild()
+end
+
+function CheatMenuTutorialPanel:rebuild()
+    local tm = getTextManager and getTextManager()
+    local textWidth = math.max(0, self.width - (self.padding * 2))
+    local titleFont = UIFont.Medium
+    local bodyFont = UIFont.Small
+    local titleHeight = tm and tm:MeasureStringY(titleFont, "A") or 20
+    local bodyHeight = tm and tm:MeasureStringY(bodyFont, "A") or 18
+    self.lines = {}
+    self.contentHeight = self.padding
+
+    for index, section in ipairs(self.sections) do
+        local title = section.title or ""
+        local body = section.body or ""
+        if title ~= "" then
+            table.insert(self.lines, {
+                text = title,
+                font = titleFont,
+                color = { r = 0.94, g = 0.94, b = 0.94, a = 1 },
+                height = titleHeight,
+                spacing = 6
+            })
+            self.contentHeight = self.contentHeight + titleHeight + 6
+        end
+        if body ~= "" then
+            local wrapped = wrapTutorialText(bodyFont, body, textWidth)
+            for _, line in ipairs(wrapped) do
+                table.insert(self.lines, {
+                    text = line,
+                    font = bodyFont,
+                    color = { r = 0.82, g = 0.82, b = 0.82, a = 1 },
+                    height = bodyHeight,
+                    spacing = 4
+                })
+                self.contentHeight = self.contentHeight + bodyHeight + 4
+            end
+        end
+        if index < #self.sections then
+            table.insert(self.lines, { text = nil, height = 12, spacing = 6 })
+            self.contentHeight = self.contentHeight + 18
+        end
+    end
+    self.contentHeight = math.max(self.contentHeight, self.padding + self.height)
+end
+
+function CheatMenuTutorialPanel:onMouseWheel(del)
+    if self.contentHeight <= self.height then
+        return false
+    end
+    local step = 40
+    self.scrollY = self.scrollY - (del * step)
+    if self.scrollY < 0 then
+        self.scrollY = 0
+    end
+    local maxScroll = self.contentHeight - self.height
+    if self.scrollY > maxScroll then
+        self.scrollY = maxScroll
+    end
+    return true
+end
+
+function CheatMenuTutorialPanel:prerender()
+    ISPanel.prerender(self)
+    self:setStencilRect(0, 0, self.width, self.height)
+    local y = self.padding - self.scrollY
+    local x = self.padding
+    for _, line in ipairs(self.lines) do
+        if line.text and line.font then
+            local color = line.color or { r = 0.85, g = 0.85, b = 0.85, a = 1 }
+            self:drawText(line.text, x, y, color.r, color.g, color.b, color.a or 1, line.font)
+            y = y + line.height + (line.spacing or 0)
+        else
+            y = y + (line.height or 0) + (line.spacing or 0)
+        end
+    end
+    self:clearStencilRect()
+end
+
+function CheatMenuUI:buildTutorialSections()
+    local sections = {}
+    sections[1] = {
+        title = CheatMenuText.get("UI_ZedToolbox_Tutorial_Header", "Guia rápido do Zed Toolbox"),
+        body = ""
+    }
+    local definitions = {
+        {
+            titleKey = "UI_ZedToolbox_Tutorial_AccessTitle",
+            fallbackTitle = "Abrindo o menu",
+            bodyKey = "UI_ZedToolbox_Tutorial_AccessBody",
+            fallbackBody = "Use a tecla configurada para abrir o Zed Toolbox e escolha a aba desejada no seletor superior para acessar cada conjunto de funções."
+        },
+        {
+            titleKey = "UI_ZedToolbox_Tutorial_ItemsTitle",
+            fallbackTitle = "Aba de itens",
+            bodyKey = "UI_ZedToolbox_Tutorial_ItemsBody",
+            fallbackBody = "Procure por itens, escolha a categoria e use as ações para gerar itens, salvar favoritos ou criar presets para reaplicar configurações rapidamente."
+        },
+        {
+            titleKey = "UI_ZedToolbox_Tutorial_UtilsTitle",
+            fallbackTitle = "Aba de utilidades",
+            bodyKey = "UI_ZedToolbox_Tutorial_UtilsBody",
+            fallbackBody = "Ative truques como God Mode, kill instantâneo, ajustes de velocidade e mantenha seus status sob controle. Use os botões de cura e limpeza de zumbis quando precisar de um respiro."
+        },
+        {
+            titleKey = "UI_ZedToolbox_Tutorial_ConfigTitle",
+            fallbackTitle = "Aba de configuração",
+            bodyKey = "UI_ZedToolbox_Tutorial_ConfigBody",
+            fallbackBody = "Troque o idioma do mod e defina a tecla global para abrir o menu sempre que quiser."
+        },
+        {
+            titleKey = "UI_ZedToolbox_Tutorial_TipsTitle",
+            fallbackTitle = "Dicas rápidas",
+            bodyKey = "UI_ZedToolbox_Tutorial_TipsBody",
+            fallbackBody = "Combine presets e favoritos para montar kits completos, e revise os status exibidos na parte inferior para confirmar cada ação."
+        }
+    }
+    for _, definition in ipairs(definitions) do
+        sections[#sections + 1] = {
+            title = CheatMenuText.get(definition.titleKey, definition.fallbackTitle),
+            body = CheatMenuText.get(definition.bodyKey, definition.fallbackBody)
+        }
+    end
+    return sections
+end
+
+function CheatMenuUI:updateTutorialContent()
+    if not self.tutorialPanel then
+        return
+    end
+    CheatMenuText.setLanguage(CheatMenuText.getCurrentLanguage())
+    self.tutorialPanel:setSections(self:buildTutorialSections())
 end
 
 function CheatMenuUI:new(x, y)
@@ -174,11 +427,14 @@ function CheatMenuUI:new(x, y)
     o.tabDefinitions = {
         { id = "items", labelKey = "UI_ZedToolbox_TabItems", fallback = "Item Spawns" },
         { id = "utils", labelKey = "UI_ZedToolbox_TabUtils", fallback = "Utils" },
-        { id = "config", labelKey = "UI_ZedToolbox_TabConfig", fallback = "Config" }
+        { id = "config", labelKey = "UI_ZedToolbox_TabConfig", fallback = "Config" },
+        { id = "tutorial", labelKey = "UI_ZedToolbox_TabTutorial", fallback = "Tutorial" }
     }
-    o.tabControls = { items = {}, utils = {}, config = {} }
+    o.tabControls = { items = {}, utils = {}, config = {}, tutorial = {} }
     o.utilsSpeedValues = { 1, 1.5, 2, 3, 4, 5 }
     o.utilsLabelPositions = {}
+    o.tutorialPanel = nil
+    o.tutorialSection = nil
     return o
 end
 
@@ -243,9 +499,20 @@ function CheatMenuUI:ensureUtilsConfig()
     local normalized = {
         godMode = raw.godMode and true or false,
         hitKill = raw.hitKill and true or false,
-        speedMultiplier = speedClamped
+        infiniteStamina = raw.infiniteStamina and true or false,
+        instantBuild = raw.instantBuild and true or false,
+        noNegativeEffects = raw.noNegativeEffects and true or false,
+        noHungerThirst = raw.noHungerThirst and true or false,
+        speedMultiplier = speedClamped,
+        clearRadius = (CheatMenuUtils.getState() and CheatMenuUtils.getState().clearRadius) or 15
     }
-    local changed = raw.godMode ~= normalized.godMode or raw.hitKill ~= normalized.hitKill or math.abs(speedValue - speedClamped) > 0.001
+    local changed = raw.godMode ~= normalized.godMode
+        or raw.hitKill ~= normalized.hitKill
+        or (raw.infiniteStamina and true or false) ~= normalized.infiniteStamina
+        or (raw.instantBuild and true or false) ~= normalized.instantBuild
+        or (raw.noNegativeEffects and true or false) ~= normalized.noNegativeEffects
+        or (raw.noHungerThirst and true or false) ~= normalized.noHungerThirst
+        or math.abs(speedValue - speedClamped) > 0.001
     self.config.utils = normalized
     CheatMenuUtils.applyConfig(normalized)
     return changed
@@ -269,6 +536,19 @@ function CheatMenuUI:populateToggleCombo(combo, enabled)
     combo.selected = selected and 2 or 1
 end
 
+function CheatMenuUI:setToggleComboSelection(combo, enabled)
+    if not combo or not combo.options then
+        return
+    end
+    local target = enabled and true or false
+    for index, option in ipairs(combo.options) do
+        if option.data == target then
+            combo.selected = index
+            return
+        end
+    end
+end
+
 function CheatMenuUI:populateSpeedCombo(multiplier)
     if not self.speedCombo then
         return
@@ -289,30 +569,42 @@ function CheatMenuUI:populateSpeedCombo(multiplier)
 end
 
 function CheatMenuUI:populateUtilsOptions()
-    local utils = (self.config and self.config.utils) or { godMode = false, hitKill = false, speedMultiplier = 1 }
+    local utils = (self.config and self.config.utils) or {
+        godMode = false,
+        hitKill = false,
+        infiniteStamina = false,
+        instantBuild = false,
+        noNegativeEffects = false,
+        noHungerThirst = false,
+        speedMultiplier = 1,
+        clearRadius = 15
+    }
     self:populateToggleCombo(self.godModeCombo, utils.godMode)
     self:populateToggleCombo(self.hitKillCombo, utils.hitKill)
+    self:populateToggleCombo(self.infiniteStaminaCombo, utils.infiniteStamina)
+    self:populateToggleCombo(self.instantBuildCombo, utils.instantBuild)
+    self:populateToggleCombo(self.noNegativeEffectsCombo, utils.noNegativeEffects)
+    self:populateToggleCombo(self.noHungerThirstCombo, utils.noHungerThirst)
     self:populateSpeedCombo(utils.speedMultiplier)
 end
 
 function CheatMenuUI:syncUtilsUI()
-    local utils = (self.config and self.config.utils) or { godMode = false, hitKill = false, speedMultiplier = 1 }
-    if self.godModeCombo and self.godModeCombo.options then
-        for index, option in ipairs(self.godModeCombo.options) do
-            if option.data == (utils.godMode and true or false) then
-                self.godModeCombo.selected = index
-                break
-            end
-        end
-    end
-    if self.hitKillCombo and self.hitKillCombo.options then
-        for index, option in ipairs(self.hitKillCombo.options) do
-            if option.data == (utils.hitKill and true or false) then
-                self.hitKillCombo.selected = index
-                break
-            end
-        end
-    end
+    local utils = (self.config and self.config.utils) or {
+        godMode = false,
+        hitKill = false,
+        infiniteStamina = false,
+        instantBuild = false,
+        noNegativeEffects = false,
+        noHungerThirst = false,
+        speedMultiplier = 1,
+        clearRadius = 15
+    }
+    self:setToggleComboSelection(self.godModeCombo, utils.godMode)
+    self:setToggleComboSelection(self.hitKillCombo, utils.hitKill)
+    self:setToggleComboSelection(self.infiniteStaminaCombo, utils.infiniteStamina)
+    self:setToggleComboSelection(self.instantBuildCombo, utils.instantBuild)
+    self:setToggleComboSelection(self.noNegativeEffectsCombo, utils.noNegativeEffects)
+    self:setToggleComboSelection(self.noHungerThirstCombo, utils.noHungerThirst)
     if self.speedCombo and self.speedCombo.options then
         local target = clamp(utils.speedMultiplier or 1, 0.5, 5)
         for index, option in ipairs(self.speedCombo.options) do
@@ -321,6 +613,10 @@ function CheatMenuUI:syncUtilsUI()
                 break
             end
         end
+    end
+    if self.clearZombiesButton then
+        local radius = utils.clearRadius or 15
+        self.clearZombiesButton:setTitle(CheatMenuText.get("UI_ZedToolbox_Utils_ClearZombiesLabel", "Clear Nearby Zombies (%1 tiles)", radius))
     end
 end
 
@@ -592,8 +888,8 @@ function CheatMenuUI:createChildren()
     }
 
     local utilsSectionTop = listTop - 30
-    local utilsComboWidth = 220
-    local utilsSpacing = 58
+    local utilsComboWidth = 240
+    local utilsSpacing = 48
     local utilsX = PADDING
 
     local godModeY = listTop
@@ -618,7 +914,51 @@ function CheatMenuUI:createChildren()
     self:addChild(self.hitKillCombo)
     self:addToTab("utils", self.hitKillCombo)
 
-    local speedY = hitKillY + utilsSpacing
+    local infiniteY = hitKillY + utilsSpacing
+    self.utilsLabelPositions.infiniteStamina = { x = utilsX, y = infiniteY - 18 }
+    self.infiniteStaminaCombo = ISComboBox:new(utilsX, infiniteY, utilsComboWidth, 24, self, nil)
+    self.infiniteStaminaCombo:initialise()
+    self.infiniteStaminaCombo:instantiate()
+    self.infiniteStaminaCombo.onChange = function()
+        self:onInfiniteStaminaChanged()
+    end
+    self:addChild(self.infiniteStaminaCombo)
+    self:addToTab("utils", self.infiniteStaminaCombo)
+
+    local instantBuildY = infiniteY + utilsSpacing
+    self.utilsLabelPositions.instantBuild = { x = utilsX, y = instantBuildY - 18 }
+    self.instantBuildCombo = ISComboBox:new(utilsX, instantBuildY, utilsComboWidth, 24, self, nil)
+    self.instantBuildCombo:initialise()
+    self.instantBuildCombo:instantiate()
+    self.instantBuildCombo.onChange = function()
+        self:onInstantBuildChanged()
+    end
+    self:addChild(self.instantBuildCombo)
+    self:addToTab("utils", self.instantBuildCombo)
+
+    local noNegativeY = instantBuildY + utilsSpacing
+    self.utilsLabelPositions.noNegativeEffects = { x = utilsX, y = noNegativeY - 18 }
+    self.noNegativeEffectsCombo = ISComboBox:new(utilsX, noNegativeY, utilsComboWidth, 24, self, nil)
+    self.noNegativeEffectsCombo:initialise()
+    self.noNegativeEffectsCombo:instantiate()
+    self.noNegativeEffectsCombo.onChange = function()
+        self:onNoNegativeEffectsChanged()
+    end
+    self:addChild(self.noNegativeEffectsCombo)
+    self:addToTab("utils", self.noNegativeEffectsCombo)
+
+    local noHungerY = noNegativeY + utilsSpacing
+    self.utilsLabelPositions.noHungerThirst = { x = utilsX, y = noHungerY - 18 }
+    self.noHungerThirstCombo = ISComboBox:new(utilsX, noHungerY, utilsComboWidth, 24, self, nil)
+    self.noHungerThirstCombo:initialise()
+    self.noHungerThirstCombo:instantiate()
+    self.noHungerThirstCombo.onChange = function()
+        self:onNoHungerThirstChanged()
+    end
+    self:addChild(self.noHungerThirstCombo)
+    self:addToTab("utils", self.noHungerThirstCombo)
+
+    local speedY = noHungerY + utilsSpacing
     self.utilsLabelPositions.speed = { x = utilsX, y = speedY - 18 }
     self.speedCombo = ISComboBox:new(utilsX, speedY, utilsComboWidth, 24, self, nil)
     self.speedCombo:initialise()
@@ -629,7 +969,23 @@ function CheatMenuUI:createChildren()
     self:addChild(self.speedCombo)
     self:addToTab("utils", self.speedCombo)
 
-    local utilsSectionBottom = self.speedCombo.y + self.speedCombo.height + 40
+    local healY = speedY + utilsSpacing + 6
+    self.healButton = ISButton:new(utilsX, healY, 180, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_Utils_Heal", "Heal Player"), self, CheatMenuUI.onHealClicked)
+    self.healButton:initialise()
+    self.healButton:instantiate()
+    self:addChild(self.healButton)
+    self:addToTab("utils", self.healButton)
+
+    local clearY = healY + BUTTON_HEIGHT + BUTTON_GAP
+    local clearRadius = (CheatMenuUtils.getState() and CheatMenuUtils.getState().clearRadius) or 15
+    local clearLabel = CheatMenuText.get("UI_ZedToolbox_Utils_ClearZombiesLabel", "Clear Nearby Zombies (%1 tiles)", clearRadius)
+    self.clearZombiesButton = ISButton:new(utilsX, clearY, utilsComboWidth, BUTTON_HEIGHT, clearLabel, self, CheatMenuUI.onClearZombiesClicked)
+    self.clearZombiesButton:initialise()
+    self.clearZombiesButton:instantiate()
+    self:addChild(self.clearZombiesButton)
+    self:addToTab("utils", self.clearZombiesButton)
+
+    local utilsSectionBottom = self.clearZombiesButton.y + self.clearZombiesButton.height + 40
     self.utilsSection = {
         x = utilsX - 8,
         y = utilsSectionTop,
@@ -667,6 +1023,20 @@ function CheatMenuUI:createChildren()
     self:addChild(self.applyHotkeyBtn)
     self:addToTab("config", self.applyHotkeyBtn)
 
+    local tutorialTop = listTop - 30
+    local tutorialHeight = self.height - tutorialTop - PADDING
+    self.tutorialPanel = CheatMenuTutorialPanel:new(PADDING, tutorialTop, self.width - (PADDING * 2), tutorialHeight)
+    self:addChild(self.tutorialPanel)
+    self:addToTab("tutorial", self.tutorialPanel)
+
+    self.tutorialSection = {
+        x = self.tutorialPanel.x - 8,
+        y = tutorialTop,
+        w = self.tutorialPanel.width + 16,
+        h = tutorialHeight
+    }
+
+    self:updateTutorialContent()
     self:setActiveTab(self.activeTab)
 end
 
@@ -828,6 +1198,58 @@ function CheatMenuUI:onHitKillChanged()
     self:syncUtilsUI()
 end
 
+function CheatMenuUI:onInfiniteStaminaChanged()
+    if not self.infiniteStaminaCombo or not self.infiniteStaminaCombo.options then
+        return
+    end
+    local option = self.infiniteStaminaCombo.options[self.infiniteStaminaCombo.selected]
+    local enabled = option and option.data and true or false
+    self:updateUtilsConfig("infiniteStamina", enabled)
+    CheatMenuUtils.setInfiniteStamina(enabled)
+    local messageKey = enabled and "UI_ZedToolbox_StatusInfiniteStaminaOn" or "UI_ZedToolbox_StatusInfiniteStaminaOff"
+    self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Infinite stamina enabled." or "Infinite stamina disabled."))
+    self:syncUtilsUI()
+end
+
+function CheatMenuUI:onInstantBuildChanged()
+    if not self.instantBuildCombo or not self.instantBuildCombo.options then
+        return
+    end
+    local option = self.instantBuildCombo.options[self.instantBuildCombo.selected]
+    local enabled = option and option.data and true or false
+    self:updateUtilsConfig("instantBuild", enabled)
+    CheatMenuUtils.setInstantBuild(enabled)
+    local messageKey = enabled and "UI_ZedToolbox_StatusInstantBuildOn" or "UI_ZedToolbox_StatusInstantBuildOff"
+    self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Instant build enabled." or "Instant build disabled."))
+    self:syncUtilsUI()
+end
+
+function CheatMenuUI:onNoNegativeEffectsChanged()
+    if not self.noNegativeEffectsCombo or not self.noNegativeEffectsCombo.options then
+        return
+    end
+    local option = self.noNegativeEffectsCombo.options[self.noNegativeEffectsCombo.selected]
+    local enabled = option and option.data and true or false
+    self:updateUtilsConfig("noNegativeEffects", enabled)
+    CheatMenuUtils.setNoNegativeEffects(enabled)
+    local messageKey = enabled and "UI_ZedToolbox_StatusNoNegativeEffectsOn" or "UI_ZedToolbox_StatusNoNegativeEffectsOff"
+    self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Negative effects cleared automatically." or "Negative effect protection disabled."))
+    self:syncUtilsUI()
+end
+
+function CheatMenuUI:onNoHungerThirstChanged()
+    if not self.noHungerThirstCombo or not self.noHungerThirstCombo.options then
+        return
+    end
+    local option = self.noHungerThirstCombo.options[self.noHungerThirstCombo.selected]
+    local enabled = option and option.data and true or false
+    self:updateUtilsConfig("noHungerThirst", enabled)
+    CheatMenuUtils.setNoHungerThirst(enabled)
+    local messageKey = enabled and "UI_ZedToolbox_StatusNoHungerThirstOn" or "UI_ZedToolbox_StatusNoHungerThirstOff"
+    self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Hunger and thirst disabled." or "Hunger and thirst restored to normal."))
+    self:syncUtilsUI()
+end
+
 function CheatMenuUI:onSpeedChanged()
     if not self.speedCombo or not self.speedCombo.options then
         return
@@ -838,6 +1260,26 @@ function CheatMenuUI:onSpeedChanged()
     CheatMenuUtils.setSpeedMultiplier(multiplier)
     self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSpeedApplied", "Speed set to %1x.", multiplier))
     self:syncUtilsUI()
+end
+
+function CheatMenuUI:onHealClicked()
+    local success = CheatMenuUtils.healPlayer()
+    if success then
+        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusHealed", "Player fully healed."))
+    else
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusHealFailed", "Player not ready."))
+    end
+end
+
+function CheatMenuUI:onClearZombiesClicked()
+    local utilsState = CheatMenuUtils.getState() or {}
+    local finalRadius = utilsState.clearRadius or 15
+    local cleared = CheatMenuUtils.clearZombies(finalRadius)
+    if cleared > 0 then
+        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusClearZombies", "%1 zombies removed within %2 tiles.", cleared, finalRadius))
+    else
+        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusClearZombiesNone", "No zombies found within %1 tiles.", finalRadius))
+    end
 end
 
 function CheatMenuUI:populateLanguageOptions(selectedId)
@@ -921,6 +1363,13 @@ function CheatMenuUI:applyTranslations()
     if self.applyHotkeyBtn then
         self.applyHotkeyBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_SetHotkey", "Set Key"))
     end
+    if self.healButton then
+        self.healButton:setTitle(CheatMenuText.get("UI_ZedToolbox_Utils_Heal", "Heal Player"))
+    end
+    if self.clearZombiesButton then
+        self.clearZombiesButton:setTitle(CheatMenuText.get("UI_ZedToolbox_Utils_ClearZombies", "Clear Nearby Zombies"))
+    end
+    self:updateTutorialContent()
     self:refreshTargetCombo()
     self:refreshCategoryLabels()
     self:populateUtilsOptions()
@@ -957,7 +1406,7 @@ function CheatMenuUI:refreshCatalog()
 end
 
 function CheatMenuUI:populateCategories()
-    self.categoryList:clear()
+    clearControl(self.categoryList)
     local order = CheatMenuItems.getCategoryOrder()
     local previous = self.selectedCategory
     local added = {}
@@ -989,7 +1438,7 @@ function CheatMenuUI:populateCategories()
 end
 
 function CheatMenuUI:applyFilters()
-    self.itemsList:clear()
+    clearControl(self.itemsList)
     local category = self.selectedCategory or "Misc"
     local list = self.catalog[category] or {}
     local query = self:getSearchText()
@@ -1317,6 +1766,8 @@ function CheatMenuUI:prerender()
         drawSection(self, self.bottomSection)
     elseif self.activeTab == "utils" then
         drawSection(self, self.utilsSection)
+    elseif self.activeTab == "tutorial" then
+        drawSection(self, self.tutorialSection)
     end
 
     if self.status.message ~= "" then
@@ -1353,6 +1804,18 @@ function CheatMenuUI:prerender()
     if self.activeTab == "utils" and self.utilsLabelPositions.hitKill then
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_HitKill", "Hit Kill"), self.utilsLabelPositions.hitKill.x, self.utilsLabelPositions.hitKill.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
     end
+    if self.activeTab == "utils" and self.utilsLabelPositions.infiniteStamina then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_InfiniteStamina", "Infinite Stamina"), self.utilsLabelPositions.infiniteStamina.x, self.utilsLabelPositions.infiniteStamina.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
+    if self.activeTab == "utils" and self.utilsLabelPositions.instantBuild then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_InstantBuild", "Instant Build"), self.utilsLabelPositions.instantBuild.x, self.utilsLabelPositions.instantBuild.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
+    if self.activeTab == "utils" and self.utilsLabelPositions.noNegativeEffects then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_NoNegativeEffects", "No Negative Effects"), self.utilsLabelPositions.noNegativeEffects.x, self.utilsLabelPositions.noNegativeEffects.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
+    if self.activeTab == "utils" and self.utilsLabelPositions.noHungerThirst then
+        self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_NoHungerThirst", "No Hunger & Thirst"), self.utilsLabelPositions.noHungerThirst.x, self.utilsLabelPositions.noHungerThirst.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    end
     if self.activeTab == "utils" and self.utilsLabelPositions.speed then
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_Speed", "Speed"), self.utilsLabelPositions.speed.x, self.utilsLabelPositions.speed.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
     end
@@ -1382,7 +1845,13 @@ local GUARD_METHODS = {
     "onSpawnClicked",
     "onGodModeChanged",
     "onHitKillChanged",
-    "onSpeedChanged"
+    "onInfiniteStaminaChanged",
+    "onInstantBuildChanged",
+    "onNoNegativeEffectsChanged",
+    "onNoHungerThirstChanged",
+    "onSpeedChanged",
+    "onHealClicked",
+    "onClearZombiesClicked"
 }
 
 for _, methodName in ipairs(GUARD_METHODS) do
