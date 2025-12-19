@@ -214,199 +214,229 @@ local function getCategoryLabel(category)
     return CheatMenuText.get(key, fallback)
 end
 
-local CheatMenuTutorialPanel = ISPanel:derive("CheatMenuTutorialPanel")
+local MAX_SKILL_LEVEL = 10
 
-local function wrapTutorialText(font, text, maxWidth)
-    local tm = getTextManager and getTextManager()
-    if not tm or maxWidth <= 0 then
-        return { text or "" }
+local DEFAULT_SKILL_ENTRIES = {
+    "Strength",
+    "Fitness",
+    "Sprinting",
+    "Lightfoot",
+    "Nimble",
+    "Sneak",
+    "Maintenance",
+    "Axe",
+    "LongBlade",
+    "SmallBlade",
+    "LongBlunt",
+    "SmallBlunt",
+    "Spear",
+    "Woodwork",
+    "Cooking",
+    "Farming",
+    "Doctor",
+    "Electricity",
+    "MetalWelding",
+    "Mechanics",
+    "Tailoring",
+    "Aiming",
+    "Reloading",
+    "Fishing",
+    "Trapping",
+    "PlantScavenging"
+}
+
+local function getPlayerCharacter()
+    if not getSpecificPlayer then
+        return nil
     end
-    local lines = {}
-    local current = ""
-    for word in tostring(text or ""):gmatch("%S+") do
-        local candidate = current ~= "" and (current .. " " .. word) or word
-        if tm:MeasureStringX(font, candidate) > maxWidth and current ~= "" then
-            table.insert(lines, current)
-            current = word
-        else
-            current = candidate
-        end
-    end
-    if current ~= "" then
-        table.insert(lines, current)
-    end
-    if #lines == 0 then
-        table.insert(lines, "")
-    end
-    return lines
+    return getSpecificPlayer(0)
 end
 
-function CheatMenuTutorialPanel:new(x, y, width, height)
-    local o = ISPanel:new(x, y, width, height)
-    setmetatable(o, self)
-    self.__index = self
-    o:noBackground()
-    o.borderColor = { r = 1, g = 1, b = 1, a = 0 }
-    o.padding = 18
-    o.scrollY = 0
-    o.sections = {}
-    o.lines = {}
-    o.contentHeight = 0
-    return o
-end
-
-function CheatMenuTutorialPanel:setWidth(width)
-    if width == self.width then
-        return
+local function buildSkillDefinitions()
+    local definitions = {}
+    if not Perks then
+        return definitions
     end
-    ISPanel.setWidth(self, width)
-    self:rebuild()
-end
-
-function CheatMenuTutorialPanel:setHeight(height)
-    if height == self.height then
-        return
-    end
-    ISPanel.setHeight(self, height)
-    self:rebuild()
-end
-
-function CheatMenuTutorialPanel:setSections(sections)
-    self.sections = sections or {}
-    self.scrollY = 0
-    self:rebuild()
-end
-
-function CheatMenuTutorialPanel:rebuild()
-    local tm = getTextManager and getTextManager()
-    local textWidth = math.max(0, self.width - (self.padding * 2))
-    local titleFont = UIFont.Medium
-    local bodyFont = UIFont.Small
-    local titleHeight = tm and tm:MeasureStringY(titleFont, "A") or 20
-    local bodyHeight = tm and tm:MeasureStringY(bodyFont, "A") or 18
-    self.lines = {}
-    self.contentHeight = self.padding
-
-    for index, section in ipairs(self.sections) do
-        local title = section.title or ""
-        local body = section.body or ""
-        if title ~= "" then
-            table.insert(self.lines, {
-                text = title,
-                font = titleFont,
-                color = { r = 0.94, g = 0.94, b = 0.94, a = 1 },
-                height = titleHeight,
-                spacing = 6
-            })
-            self.contentHeight = self.contentHeight + titleHeight + 6
-        end
-        if body ~= "" then
-            local wrapped = wrapTutorialText(bodyFont, body, textWidth)
-            for _, line in ipairs(wrapped) do
-                table.insert(self.lines, {
-                    text = line,
-                    font = bodyFont,
-                    color = { r = 0.82, g = 0.82, b = 0.82, a = 1 },
-                    height = bodyHeight,
-                    spacing = 4
-                })
-                self.contentHeight = self.contentHeight + bodyHeight + 4
+    for _, id in ipairs(DEFAULT_SKILL_ENTRIES) do
+        local perkType = Perks[id]
+        if perkType then
+            local perk = nil
+            if PerkFactory and PerkFactory.getPerkFromName then
+                perk = PerkFactory.getPerkFromName(id)
             end
-        end
-        if index < #self.sections then
-            table.insert(self.lines, { text = nil, height = 12, spacing = 6 })
-            self.contentHeight = self.contentHeight + 18
+            local label = id
+            if perk then
+                if perk.getName and perk:getName() and perk:getName() ~= "" then
+                    label = perk:getName()
+                elseif perk.getLabel and perk:getLabel() and perk:getLabel() ~= "" then
+                    label = perk:getLabel()
+                end
+            end
+            table.insert(definitions, {
+                id = id,
+                type = perkType,
+                perk = perk,
+                label = label
+            })
         end
     end
-    self.contentHeight = math.max(self.contentHeight, self.padding + self.height)
+    table.sort(definitions, function(a, b)
+        local aLabel = string.lower(tostring(a.label or a.id or ""))
+        local bLabel = string.lower(tostring(b.label or b.id or ""))
+        return aLabel < bLabel
+    end)
+    return definitions
 end
 
-function CheatMenuTutorialPanel:onMouseWheel(del)
-    if self.contentHeight <= self.height then
+local function clampSkillLevel(level)
+    local numeric = tonumber(level) or 0
+    if numeric < 0 then
+        numeric = 0
+    end
+    if numeric > MAX_SKILL_LEVEL then
+        numeric = MAX_SKILL_LEVEL
+    end
+    return math.floor(numeric + 0.5)
+end
+
+local function getPerkXpForLevel(perk, level)
+    local target = clampSkillLevel(level)
+    if target <= 0 then
+        return 0
+    end
+    if perk and perk.getTotalXpForLevel then
+        local ok, value = pcall(perk.getTotalXpForLevel, perk, target)
+        if ok and type(value) == "number" then
+            return value
+        end
+    end
+    return target * 1000
+end
+
+local function getPlayerSkillLevel(player, definition)
+    if not player or not definition or not definition.type then
+        return 0
+    end
+    if player.getPerkLevel then
+        local ok, value = pcall(player.getPerkLevel, player, definition.type)
+        if ok and type(value) == "number" then
+            return clampSkillLevel(value)
+        end
+    end
+    local xpSystem = player.getXp and player:getXp()
+    if xpSystem and xpSystem.getXP then
+        local okXp, currentXp = pcall(xpSystem.getXP, xpSystem, definition.type)
+        if okXp and type(currentXp) == "number" then
+            local best = 0
+            for level = 0, MAX_SKILL_LEVEL do
+                if currentXp >= getPerkXpForLevel(definition.perk, level) then
+                    best = level
+                else
+                    break
+                end
+            end
+            return best
+        end
+    end
+    return 0
+end
+
+local function applySkillLevel(player, definition, level)
+    if not player or not definition or not definition.type then
         return false
     end
-    local step = 40
-    self.scrollY = self.scrollY - (del * step)
-    if self.scrollY < 0 then
-        self.scrollY = 0
+    local xpSystem = player.getXp and player:getXp()
+    if not xpSystem then
+        return false
     end
-    local maxScroll = self.contentHeight - self.height
-    if self.scrollY > maxScroll then
-        self.scrollY = maxScroll
+    local targetLevel = clampSkillLevel(level)
+    local targetXp = getPerkXpForLevel(definition.perk, targetLevel)
+    local xpTargets = { targetXp }
+    if targetLevel > 0 then
+        local buffer = math.max(5, math.floor(targetXp * 0.02))
+        table.insert(xpTargets, targetXp + buffer)
     end
-    return true
-end
 
-function CheatMenuTutorialPanel:prerender()
-    ISPanel.prerender(self)
-    self:setStencilRect(0, 0, self.width, self.height)
-    local y = self.padding - self.scrollY
-    local x = self.padding
-    for _, line in ipairs(self.lines) do
-        if line.text and line.font then
-            local color = line.color or { r = 0.85, g = 0.85, b = 0.85, a = 1 }
-            self:drawText(line.text, x, y, color.r, color.g, color.b, color.a or 1, line.font)
-            y = y + line.height + (line.spacing or 0)
-        else
-            y = y + (line.height or 0) + (line.spacing or 0)
+    local function applyXpTarget(xpValue)
+        local changed = false
+        if type(xpSystem.setXPToLevel) == "function" then
+            local ok = pcall(xpSystem.setXPToLevel, xpSystem, definition.type, targetLevel)
+            changed = ok and true or changed
+        end
+        if type(xpSystem.setXP) == "function" then
+            local ok = pcall(xpSystem.setXP, xpSystem, definition.type, xpValue)
+            changed = ok and true or changed
+        end
+        if type(xpSystem.AddXP) == "function" and type(xpSystem.getXP) == "function" then
+            local okCurrent, currentXp = pcall(xpSystem.getXP, xpSystem, definition.type)
+            if okCurrent and type(currentXp) == "number" then
+                local delta = xpValue - currentXp
+                if math.abs(delta) > 0.01 then
+                    local ok = pcall(xpSystem.AddXP, xpSystem, definition.type, delta)
+                    changed = ok and true or changed
+                end
+            end
+        end
+        if type(xpSystem.addXP) == "function" and type(xpSystem.getXP) == "function" then
+            local okCurrent, currentXp = pcall(xpSystem.getXP, xpSystem, definition.type)
+            if okCurrent and type(currentXp) == "number" then
+                local delta = xpValue - currentXp
+                if math.abs(delta) > 0.01 then
+                    local ok = pcall(xpSystem.addXP, xpSystem, definition.type, delta)
+                    changed = ok and true or changed
+                end
+            end
+        end
+        return changed
+    end
+
+    local applied = false
+    for _, xpValue in ipairs(xpTargets) do
+        if applyXpTarget(xpValue) then
+            applied = true
+            break
         end
     end
-    self:clearStencilRect()
-end
 
-function CheatMenuUI:buildTutorialSections()
-    local sections = {}
-    sections[1] = {
-        title = CheatMenuText.get("UI_ZedToolbox_Tutorial_Header", "Guia rápido do Zed Toolbox"),
-        body = ""
-    }
-    local definitions = {
-        {
-            titleKey = "UI_ZedToolbox_Tutorial_AccessTitle",
-            fallbackTitle = "Abrindo o menu",
-            bodyKey = "UI_ZedToolbox_Tutorial_AccessBody",
-            fallbackBody = "Use a tecla configurada para abrir o Zed Toolbox e escolha a aba desejada no seletor superior para acessar cada conjunto de funções."
-        },
-        {
-            titleKey = "UI_ZedToolbox_Tutorial_ItemsTitle",
-            fallbackTitle = "Aba de itens",
-            bodyKey = "UI_ZedToolbox_Tutorial_ItemsBody",
-            fallbackBody = "Procure por itens, escolha a categoria e use as ações para gerar itens, salvar favoritos ou criar presets para reaplicar configurações rapidamente."
-        },
-        {
-            titleKey = "UI_ZedToolbox_Tutorial_UtilsTitle",
-            fallbackTitle = "Aba de utilidades",
-            bodyKey = "UI_ZedToolbox_Tutorial_UtilsBody",
-            fallbackBody = "Ative truques como God Mode, kill instantâneo, ajustes de velocidade e mantenha seus status sob controle. Use os botões de cura e limpeza de zumbis quando precisar de um respiro."
-        },
-        {
-            titleKey = "UI_ZedToolbox_Tutorial_ConfigTitle",
-            fallbackTitle = "Aba de configuração",
-            bodyKey = "UI_ZedToolbox_Tutorial_ConfigBody",
-            fallbackBody = "Troque o idioma do mod e defina a tecla global para abrir o menu sempre que quiser."
-        },
-        {
-            titleKey = "UI_ZedToolbox_Tutorial_TipsTitle",
-            fallbackTitle = "Dicas rápidas",
-            bodyKey = "UI_ZedToolbox_Tutorial_TipsBody",
-            fallbackBody = "Combine presets e favoritos para montar kits completos, e revise os status exibidos na parte inferior para confirmar cada ação."
-        }
-    }
-    for _, definition in ipairs(definitions) do
-        sections[#sections + 1] = {
-            title = CheatMenuText.get(definition.titleKey, definition.fallbackTitle),
-            body = CheatMenuText.get(definition.bodyKey, definition.fallbackBody)
-        }
+    if type(xpSystem.setLevel) == "function" then
+        pcall(xpSystem.setLevel, xpSystem, definition.type, targetLevel)
     end
-    return sections
-end
+    if type(xpSystem.setPerkBoost) == "function" then
+        pcall(xpSystem.setPerkBoost, xpSystem, definition.type, 3)
+    end
 
-function CheatMenuUI:updateTutorialContent()
-    if not self.tutorialPanel then
-        return
+    local currentLevel = getPlayerSkillLevel(player, definition)
+    if currentLevel ~= targetLevel then
+        if targetLevel > currentLevel and type(player.LevelPerk) == "function" then
+            for _ = currentLevel + 1, targetLevel do
+                pcall(player.LevelPerk, player, definition.type)
+            end
+            currentLevel = getPlayerSkillLevel(player, definition)
+        elseif targetLevel < currentLevel and type(player.LoseLevel) == "function" then
+            for _ = currentLevel - 1, targetLevel, -1 do
+                pcall(player.LoseLevel, player, definition.type)
+            end
+            currentLevel = getPlayerSkillLevel(player, definition)
+        end
     end
-    CheatMenuText.setLanguage(CheatMenuText.getCurrentLanguage())
-    self.tutorialPanel:setSections(self:buildTutorialSections())
+
+    if type(xpSystem.refreshXp) == "function" then
+        pcall(xpSystem.refreshXp, xpSystem)
+    end
+    if type(player.transmitXp) == "function" then
+        pcall(player.transmitXp, player)
+    end
+    if type(player.transmitSkills) == "function" then
+        pcall(player.transmitSkills, player)
+    end
+    if type(player.transmitStats) == "function" then
+        pcall(player.transmitStats, player)
+    end
+
+    if currentLevel ~= targetLevel then
+        return false
+    end
+    return true
 end
 
 function CheatMenuUI:new(x, y)
@@ -427,14 +457,14 @@ function CheatMenuUI:new(x, y)
     o.tabDefinitions = {
         { id = "items", labelKey = "UI_ZedToolbox_TabItems", fallback = "Item Spawns" },
         { id = "utils", labelKey = "UI_ZedToolbox_TabUtils", fallback = "Utils" },
-        { id = "config", labelKey = "UI_ZedToolbox_TabConfig", fallback = "Config" },
-        { id = "tutorial", labelKey = "UI_ZedToolbox_TabTutorial", fallback = "Tutorial" }
+        { id = "skills", labelKey = "UI_ZedToolbox_TabSkills", fallback = "Skills" },
+        { id = "config", labelKey = "UI_ZedToolbox_TabConfig", fallback = "Config" }
     }
-    o.tabControls = { items = {}, utils = {}, config = {}, tutorial = {} }
+    o.tabControls = { items = {}, utils = {}, skills = {}, config = {} }
     o.utilsSpeedValues = { 1, 1.5, 2, 3, 4, 5 }
     o.utilsLabelPositions = {}
-    o.tutorialPanel = nil
-    o.tutorialSection = nil
+    o.skillDefinitions = buildSkillDefinitions()
+    o.skillCurrentLevelText = ""
     return o
 end
 
@@ -549,6 +579,248 @@ function CheatMenuUI:setToggleComboSelection(combo, enabled)
     end
 end
 
+function CheatMenuUI:getSkillDefinitions()
+    if not self.skillDefinitions or #self.skillDefinitions == 0 then
+        self.skillDefinitions = buildSkillDefinitions()
+    end
+    return self.skillDefinitions or {}
+end
+
+function CheatMenuUI:refreshSkillDefinitions()
+    self.skillDefinitions = buildSkillDefinitions()
+end
+
+function CheatMenuUI:getSelectedSkillDefinition()
+    if not self.skillCombo or not self.skillCombo.options then
+        return nil
+    end
+    local index = self.skillCombo.selected or 1
+    local definitions = self:getSkillDefinitions()
+    return definitions[index]
+end
+
+function CheatMenuUI:getSelectedSkillLevel()
+    if not self.skillLevelCombo or not self.skillLevelCombo.options then
+        return 0
+    end
+    local option = self.skillLevelCombo.options[self.skillLevelCombo.selected]
+    return clampSkillLevel(option and option.data)
+end
+
+function CheatMenuUI:populateSkillOptions(selectedType)
+    if not self.skillCombo then
+        return
+    end
+    self:refreshSkillDefinitions()
+    self.skillCombo:clear()
+    local definitions = self:getSkillDefinitions()
+    local fallbackIndex = 1
+    for index, definition in ipairs(definitions) do
+        local label = tostring(definition.label or definition.id or "Skill")
+        self.skillCombo:addOptionWithData(label, definition.type)
+        if selectedType and definition.type == selectedType then
+            fallbackIndex = index
+        end
+    end
+    if #definitions == 0 then
+        self.skillCombo:addOption(CheatMenuText.get("UI_ZedToolbox_Skills_None", "No skills available"))
+    end
+    local optionCount = self.skillCombo.options and #self.skillCombo.options or 0
+    if optionCount > 0 then
+        if fallbackIndex > optionCount then
+            fallbackIndex = optionCount
+        end
+        self.skillCombo.selected = fallbackIndex
+    else
+        self.skillCombo.selected = 1
+    end
+end
+
+function CheatMenuUI:populateSkillLevelOptions(selectedLevel)
+    if not self.skillLevelCombo then
+        return
+    end
+    self.skillLevelCombo:clear()
+    local fallbackIndex = 1
+    local level = clampSkillLevel(selectedLevel)
+    for value = 0, MAX_SKILL_LEVEL do
+        local label = tostring(value)
+        self.skillLevelCombo:addOptionWithData(label, value)
+        if value == level then
+            fallbackIndex = value + 1
+        end
+    end
+    self.skillLevelCombo.selected = fallbackIndex
+end
+
+function CheatMenuUI:updateSkillCurrentLevelText()
+    local player = getPlayerCharacter()
+    local definition = self:getSelectedSkillDefinition()
+    local currentLevel = getPlayerSkillLevel(player, definition)
+    self.skillCurrentLevelText = CheatMenuText.get("UI_ZedToolbox_Skills_CurrentLevel", "Current Level: %1", currentLevel)
+    return currentLevel
+end
+
+function CheatMenuUI:syncSkillUI()
+    local player = getPlayerCharacter()
+    local definition = self:getSelectedSkillDefinition()
+    local currentLevel = getPlayerSkillLevel(player, definition)
+    self:populateSkillLevelOptions(currentLevel)
+    if self.skillCombo and self.skillCombo.options and #self.skillCombo.options > 0 then
+        self.skillCombo.selected = math.max(1, self.skillCombo.selected or 1)
+    end
+    self:updateSkillCurrentLevelText()
+end
+
+function CheatMenuUI:onSkillSelectionChanged()
+    self:syncSkillUI()
+end
+
+function CheatMenuUI:onSkillApplyLevel()
+    local definition = self:getSelectedSkillDefinition()
+    if not definition then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+        return
+    end
+    local targetLevel = self:getSelectedSkillLevel()
+    local player = getPlayerCharacter()
+    if not player then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+        return
+    end
+    local success = applySkillLevel(player, definition, targetLevel)
+    if success then
+        self:syncSkillUI()
+        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), targetLevel))
+    else
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
+    end
+end
+
+function CheatMenuUI:onSkillIncrease()
+    local definition = self:getSelectedSkillDefinition()
+    if not definition then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+        return
+    end
+    local player = getPlayerCharacter()
+    if not player then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+        return
+    end
+    local currentLevel = getPlayerSkillLevel(player, definition)
+    if currentLevel >= MAX_SKILL_LEVEL then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillAtMax", "Skill already at maximum."))
+        return
+    end
+    local success = applySkillLevel(player, definition, currentLevel + 1)
+    if success then
+        self:syncSkillUI()
+        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), currentLevel + 1))
+    else
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
+    end
+end
+
+function CheatMenuUI:onSkillDecrease()
+    local definition = self:getSelectedSkillDefinition()
+    if not definition then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+        return
+    end
+    local player = getPlayerCharacter()
+    if not player then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+        return
+    end
+    local currentLevel = getPlayerSkillLevel(player, definition)
+    if currentLevel <= 0 then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillAtMin", "Skill already at minimum."))
+        return
+    end
+    local success = applySkillLevel(player, definition, currentLevel - 1)
+    if success then
+        self:syncSkillUI()
+        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), currentLevel - 1))
+    else
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
+    end
+end
+
+function CheatMenuUI:onSkillMaxSelected()
+    local definition = self:getSelectedSkillDefinition()
+    if not definition then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+        return
+    end
+    local player = getPlayerCharacter()
+    if not player then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+        return
+    end
+    local success = applySkillLevel(player, definition, MAX_SKILL_LEVEL)
+    if success then
+        self:syncSkillUI()
+        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), MAX_SKILL_LEVEL))
+    else
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
+    end
+end
+
+function CheatMenuUI:onSkillResetSelected()
+    local definition = self:getSelectedSkillDefinition()
+    if not definition then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+        return
+    end
+    local player = getPlayerCharacter()
+    if not player then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+        return
+    end
+    local success = applySkillLevel(player, definition, 0)
+    if success then
+        self:syncSkillUI()
+        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), 0))
+    else
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
+    end
+end
+
+function CheatMenuUI:onSkillMaxAll()
+    local player = getPlayerCharacter()
+    if not player then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+        return
+    end
+    local anySuccess = false
+    for _, definition in ipairs(self:getSkillDefinitions()) do
+        if applySkillLevel(player, definition, MAX_SKILL_LEVEL) then
+            anySuccess = true
+        end
+    end
+    self:syncSkillUI()
+    local messageKey = anySuccess and "UI_ZedToolbox_StatusSkillMaxAll" or "UI_ZedToolbox_StatusSkillFailed"
+    self:setStatus(anySuccess, CheatMenuText.get(messageKey, anySuccess and "All skills maxed." or "Could not update skills."))
+end
+
+function CheatMenuUI:onSkillResetAll()
+    local player = getPlayerCharacter()
+    if not player then
+        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+        return
+    end
+    local anySuccess = false
+    for _, definition in ipairs(self:getSkillDefinitions()) do
+        if applySkillLevel(player, definition, 0) then
+            anySuccess = true
+        end
+    end
+    self:syncSkillUI()
+    local messageKey = anySuccess and "UI_ZedToolbox_StatusSkillResetAll" or "UI_ZedToolbox_StatusSkillFailed"
+    self:setStatus(anySuccess, CheatMenuText.get(messageKey, anySuccess and "All skills reset." or "Could not update skills."))
+end
+
 function CheatMenuUI:populateSpeedCombo(multiplier)
     if not self.speedCombo then
         return
@@ -634,6 +906,9 @@ end
 function CheatMenuUI:initialise()
     ISPanel.initialise(self)
     self:createChildren()
+    self:populateSkillOptions()
+    self:populateSkillLevelOptions(0)
+    self:syncSkillUI()
     self:refreshCatalog()
     self:loadPersistentData()
     self:refreshFavoritesUI()
@@ -1023,20 +1298,102 @@ function CheatMenuUI:createChildren()
     self:addChild(self.applyHotkeyBtn)
     self:addToTab("config", self.applyHotkeyBtn)
 
-    local tutorialTop = listTop - 30
-    local tutorialHeight = self.height - tutorialTop - PADDING
-    self.tutorialPanel = CheatMenuTutorialPanel:new(PADDING, tutorialTop, self.width - (PADDING * 2), tutorialHeight)
-    self:addChild(self.tutorialPanel)
-    self:addToTab("tutorial", self.tutorialPanel)
+    local skillsSectionTop = listTop - 30
+    local skillsSectionWidth = self.width - (PADDING * 2)
+    local skillsInnerPadding = 12
+    local skillsContentX = PADDING + skillsInnerPadding
+    local skillsContentWidth = skillsSectionWidth - (skillsInnerPadding * 2)
+    local skillComboWidth = math.min(320, skillsContentWidth)
+    local skillRowY = skillsSectionTop + 42
+    self.skillComboLabelPos = { x = skillsContentX, y = skillRowY - 18 }
+    self.skillCombo = ISComboBox:new(skillsContentX, skillRowY, skillComboWidth, 24, self, nil)
+    self.skillCombo:initialise()
+    self.skillCombo:instantiate()
+    self.skillCombo.onChange = function()
+        self:onSkillSelectionChanged()
+    end
+    self:addChild(self.skillCombo)
+    self:addToTab("skills", self.skillCombo)
 
-    self.tutorialSection = {
-        x = self.tutorialPanel.x - 8,
-        y = tutorialTop,
-        w = self.tutorialPanel.width + 16,
-        h = tutorialHeight
+    local levelComboX = skillsContentX + skillComboWidth + 24
+    local levelComboWidth = 140
+    if levelComboX + levelComboWidth > skillsContentX + skillsContentWidth then
+        levelComboX = skillsContentX
+    end
+    local levelRowY = skillRowY
+    if levelComboX == skillsContentX then
+        levelRowY = skillRowY + 36
+    end
+    self.skillLevelLabelPos = { x = levelComboX, y = levelRowY - 18 }
+    self.skillLevelCombo = ISComboBox:new(levelComboX, levelRowY, levelComboWidth, 24, self, nil)
+    self.skillLevelCombo:initialise()
+    self.skillLevelCombo:instantiate()
+    self:addChild(self.skillLevelCombo)
+    self:addToTab("skills", self.skillLevelCombo)
+
+    local infoY = math.max(skillRowY, levelRowY) + 32
+    self.skillCurrentLevelPos = { x = skillsContentX, y = infoY }
+    local buttonRowY = infoY + 24
+    local tripleWidth = math.floor((skillsContentWidth - (BUTTON_GAP * 2)) / 3)
+    if tripleWidth < 140 then
+        tripleWidth = 140
+    end
+    self.skillApplyLevelBtn = ISButton:new(skillsContentX, buttonRowY, tripleWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_Skills_ApplyLevel", "Apply Level"), self, CheatMenuUI.onSkillApplyLevel)
+    self.skillApplyLevelBtn:initialise()
+    self.skillApplyLevelBtn:instantiate()
+    self:addChild(self.skillApplyLevelBtn)
+    self:addToTab("skills", self.skillApplyLevelBtn)
+
+    local increaseX = skillsContentX + tripleWidth + BUTTON_GAP
+    self.skillIncreaseBtn = ISButton:new(increaseX, buttonRowY, tripleWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_Skills_Increase", "Increase"), self, CheatMenuUI.onSkillIncrease)
+    self.skillIncreaseBtn:initialise()
+    self.skillIncreaseBtn:instantiate()
+    self:addChild(self.skillIncreaseBtn)
+    self:addToTab("skills", self.skillIncreaseBtn)
+
+    local decreaseX = increaseX + tripleWidth + BUTTON_GAP
+    self.skillDecreaseBtn = ISButton:new(decreaseX, buttonRowY, tripleWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_Skills_Decrease", "Decrease"), self, CheatMenuUI.onSkillDecrease)
+    self.skillDecreaseBtn:initialise()
+    self.skillDecreaseBtn:instantiate()
+    self:addChild(self.skillDecreaseBtn)
+    self:addToTab("skills", self.skillDecreaseBtn)
+
+    local secondRowY = buttonRowY + BUTTON_HEIGHT + BUTTON_GAP
+    local doubleWidth = math.floor((skillsContentWidth - BUTTON_GAP) / 2)
+    self.skillMaxSelectedBtn = ISButton:new(skillsContentX, secondRowY, doubleWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_Skills_MaxSelected", "Max Selected"), self, CheatMenuUI.onSkillMaxSelected)
+    self.skillMaxSelectedBtn:initialise()
+    self.skillMaxSelectedBtn:instantiate()
+    self:addChild(self.skillMaxSelectedBtn)
+    self:addToTab("skills", self.skillMaxSelectedBtn)
+
+    local resetSelectedX = skillsContentX + doubleWidth + BUTTON_GAP
+    self.skillResetSelectedBtn = ISButton:new(resetSelectedX, secondRowY, doubleWidth, BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_Skills_ResetSelected", "Reset Selected"), self, CheatMenuUI.onSkillResetSelected)
+    self.skillResetSelectedBtn:initialise()
+    self.skillResetSelectedBtn:instantiate()
+    self:addChild(self.skillResetSelectedBtn)
+    self:addToTab("skills", self.skillResetSelectedBtn)
+
+    local thirdRowY = secondRowY + BUTTON_HEIGHT + BUTTON_GAP
+    self.skillMaxAllBtn = ISButton:new(skillsContentX, thirdRowY, doubleWidth, PRIMARY_BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_Skills_MaxAll", "Max All Skills"), self, CheatMenuUI.onSkillMaxAll)
+    self.skillMaxAllBtn:initialise()
+    self.skillMaxAllBtn:instantiate()
+    self:addChild(self.skillMaxAllBtn)
+    self:addToTab("skills", self.skillMaxAllBtn)
+
+    self.skillResetAllBtn = ISButton:new(resetSelectedX, thirdRowY, doubleWidth, PRIMARY_BUTTON_HEIGHT, CheatMenuText.get("UI_ZedToolbox_Skills_ResetAll", "Reset All Skills"), self, CheatMenuUI.onSkillResetAll)
+    self.skillResetAllBtn:initialise()
+    self.skillResetAllBtn:instantiate()
+    self:addChild(self.skillResetAllBtn)
+    self:addToTab("skills", self.skillResetAllBtn)
+
+    local skillsSectionBottom = thirdRowY + PRIMARY_BUTTON_HEIGHT + 36
+    self.skillsSection = {
+        x = PADDING,
+        y = skillsSectionTop,
+        w = skillsSectionWidth,
+        h = skillsSectionBottom - skillsSectionTop
     }
 
-    self:updateTutorialContent()
     self:setActiveTab(self.activeTab)
 end
 
@@ -1107,6 +1464,9 @@ function CheatMenuUI:setActiveTab(tabId)
 
     if self.tabSelector then
         self:populateTabSelector(target)
+    end
+    if target == "skills" then
+        self:syncSkillUI()
     end
 end
 
@@ -1369,7 +1729,33 @@ function CheatMenuUI:applyTranslations()
     if self.clearZombiesButton then
         self.clearZombiesButton:setTitle(CheatMenuText.get("UI_ZedToolbox_Utils_ClearZombies", "Clear Nearby Zombies"))
     end
-    self:updateTutorialContent()
+    if self.skillApplyLevelBtn then
+        self.skillApplyLevelBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Skills_ApplyLevel", "Apply Level"))
+    end
+    if self.skillIncreaseBtn then
+        self.skillIncreaseBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Skills_Increase", "Increase"))
+    end
+    if self.skillDecreaseBtn then
+        self.skillDecreaseBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Skills_Decrease", "Decrease"))
+    end
+    if self.skillMaxSelectedBtn then
+        self.skillMaxSelectedBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Skills_MaxSelected", "Max Selected"))
+    end
+    if self.skillResetSelectedBtn then
+        self.skillResetSelectedBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Skills_ResetSelected", "Reset Selected"))
+    end
+    if self.skillMaxAllBtn then
+        self.skillMaxAllBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Skills_MaxAll", "Max All Skills"))
+    end
+    if self.skillResetAllBtn then
+        self.skillResetAllBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Skills_ResetAll", "Reset All Skills"))
+    end
+    local selectedDefinition = self:getSelectedSkillDefinition()
+    local selectedType = selectedDefinition and selectedDefinition.type or nil
+    local selectedLevel = self:getSelectedSkillLevel()
+    self:populateSkillOptions(selectedType)
+    self:populateSkillLevelOptions(selectedLevel)
+    self:syncSkillUI()
     self:refreshTargetCombo()
     self:refreshCategoryLabels()
     self:populateUtilsOptions()
@@ -1729,6 +2115,7 @@ function CheatMenuUI:show()
     self:populateHotkeyOptions(self.config and self.config.toggleKey)
     self:applyTranslations()
     self:setActiveTab(self.activeTab)
+    self:syncSkillUI()
     if self.activeTab == "items" then
         self.searchBox:focus()
     end
@@ -1766,8 +2153,8 @@ function CheatMenuUI:prerender()
         drawSection(self, self.bottomSection)
     elseif self.activeTab == "utils" then
         drawSection(self, self.utilsSection)
-    elseif self.activeTab == "tutorial" then
-        drawSection(self, self.tutorialSection)
+    elseif self.activeTab == "skills" then
+        drawSection(self, self.skillsSection)
     end
 
     if self.status.message ~= "" then
@@ -1797,6 +2184,16 @@ function CheatMenuUI:prerender()
         self:drawText(CheatMenuText.get("UI_ZedToolbox_BaseId", "Base ID"), self.baseIdBox.x, self.baseIdBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Quantity", "Quantity"), self.quantityBox.x, self.quantityBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Target", "Target"), self.targetCombo.x, self.targetCombo.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
+    elseif self.activeTab == "skills" then
+        if self.skillComboLabelPos then
+            self:drawText(CheatMenuText.get("UI_ZedToolbox_Skills_LabelSkill", "Skill"), self.skillComboLabelPos.x, self.skillComboLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+        end
+        if self.skillLevelLabelPos then
+            self:drawText(CheatMenuText.get("UI_ZedToolbox_Skills_LabelLevel", "Target Level"), self.skillLevelLabelPos.x, self.skillLevelLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+        end
+        if self.skillCurrentLevelPos and self.skillCurrentLevelText then
+            self:drawText(self.skillCurrentLevelText, self.skillCurrentLevelPos.x, self.skillCurrentLevelPos.y, 0.75, 0.75, 0.75, 1, UIFont.Small)
+        end
     end
     if self.activeTab == "utils" and self.utilsLabelPositions.godMode then
         self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_GodMode", "God Mode"), self.utilsLabelPositions.godMode.x, self.utilsLabelPositions.godMode.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
