@@ -103,6 +103,12 @@
 - **Speed multiplier**: Dial in sprint and movement speed on the fly
 - **Persistent settings**: Utilities remember their state between sessions
 
+### 🏅 Skill Mastery
+- **Instant leveling**: Raise or lower any perk to a target rank in one click
+- **Bulk actions**: Max or reset every skill simultaneously for rapid testing
+- **Safe XP sync**: Ensures perk boosts and XP stay aligned with the new level
+- **Live feedback**: Status bar confirms successful updates or highlights issues
+
 ### 🎨 Polished Interface
 - **Drag-and-drop panels**: Intuitive window management
 - **Visual feedback**: Success/error indicators and highlighted selections
@@ -231,6 +237,14 @@ Items are automatically organized into intuitive categories:
 - **BaseID support**: Search internal item IDs for mod compatibility
 - **Case-insensitive**: Works regardless of capitalization
 - **Partial matching**: Find items with incomplete names
+
+### 🏅 Skill Management
+
+1. Switch to the **Skills** tab inside Zed Toolbox
+2. Pick a perk from the dropdown and choose your desired level (0-10)
+3. Use **Apply Level**, **Increase**, or **Decrease** for granular control
+4. Hit **Max Selected**/**Reset Selected** for quick adjustments, or **Max All**/**Reset All** to modify every skill at once
+5. Watch the status message for confirmation; the tab automatically refreshes to show the current level
 
 ## ⭐ Favorites & Presets
 
