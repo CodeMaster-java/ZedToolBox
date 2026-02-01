@@ -538,6 +538,10 @@ return function(CheatMenuUI, deps)
             h = skillsSectionBottom - skillsSectionTop
         }
 
+        if self.buildMoodlesUI then
+            self:buildMoodlesUI()
+        end
+
         if self.buildTraitsUI then
             self:buildTraitsUI()
         end
@@ -623,6 +627,8 @@ return function(CheatMenuUI, deps)
             self:syncSkillUI()
         elseif target == "traits" and self.syncTraitsUI then
             self:syncTraitsUI()
+        elseif target == "moodles" and self.syncMoodlesUI then
+            self:syncMoodlesUI()
         end
     end
 
@@ -921,6 +927,21 @@ return function(CheatMenuUI, deps)
         if self.addAllNegativeTraitsBtn then
             self.addAllNegativeTraitsBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Traits_AddAllNegative", "Apply All Negative"))
         end
+        if self.moodleSetMinBtn then
+            self.moodleSetMinBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Moodles_SetMin", "Set Minimum"))
+        end
+        if self.moodleSetMaxBtn then
+            self.moodleSetMaxBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Moodles_SetMax", "Set Maximum"))
+        end
+        if self.moodleNormalizeBtn then
+            self.moodleNormalizeBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Moodles_Normalize", "Normalize"))
+        end
+        if self.moodlesClearNegativeBtn then
+            self.moodlesClearNegativeBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Moodles_ClearNegatives", "Clear All Negatives"))
+        end
+        if self.moodlesMaxAllBtn then
+            self.moodlesMaxAllBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Moodles_MaxAll", "Max All Moodles"))
+        end
         if self.createProfileBtn then
             self.createProfileBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Profile_Create", "Create"))
         end
@@ -943,6 +964,9 @@ return function(CheatMenuUI, deps)
             self:refreshTraitsUI()
         end
         self:refreshProfilesUI()
+        if self.refreshMoodlesUI then
+            self:refreshMoodlesUI()
+        end
         self:refreshTargetCombo()
         self:refreshCategoryLabels()
         self:populateUtilsOptions()
@@ -989,6 +1013,9 @@ return function(CheatMenuUI, deps)
         if self.refreshTraitsUI then
             self:refreshTraitsUI()
         end
+        if self.refreshMoodlesUI then
+            self:refreshMoodlesUI()
+        end
         self:populateLanguageOptions(self.config and self.config.language)
         self:populateHotkeyOptions(self.config and self.config.toggleKey)
         self:applyTranslations()
@@ -996,6 +1023,9 @@ return function(CheatMenuUI, deps)
         self:syncSkillUI()
         if self.syncTraitsUI then
             self:syncTraitsUI()
+        end
+        if self.syncMoodlesUI then
+            self:syncMoodlesUI()
         end
         if self.activeTab == "items" then
             self.searchBox:focus()
@@ -1038,6 +1068,8 @@ return function(CheatMenuUI, deps)
             drawSection(self, self.skillsSection)
         elseif self.activeTab == "traits" then
             drawSection(self, self.traitsSection)
+        elseif self.activeTab == "moodles" then
+            drawSection(self, self.moodlesSection)
         elseif self.activeTab == "profiles" then
             drawSection(self, self.profilesSection)
         end
@@ -1119,6 +1151,21 @@ return function(CheatMenuUI, deps)
                 for index, line in ipairs(self.traitDetail.lines) do
                     local color = (self.traitDetail.colors and self.traitDetail.colors[index]) or { r = 0.75, g = 0.75, b = 0.75 }
                     self:drawText(line, self.traitDetailTextPos.x, y, color.r, color.g, color.b, 1, UIFont.Small)
+                    y = y + 20
+                end
+            end
+        elseif self.activeTab == "moodles" then
+            if self.moodlesListLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_Moodles_List", "Moodles"), self.moodlesListLabelPos.x, self.moodlesListLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.moodleDetailLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_Moodles_Details", "Details"), self.moodleDetailLabelPos.x, self.moodleDetailLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.moodleDetail and self.moodleDetail.lines and self.moodleDetailTextPos then
+                local y = self.moodleDetailTextPos.y
+                for index, line in ipairs(self.moodleDetail.lines) do
+                    local color = (self.moodleDetail.colors and self.moodleDetail.colors[index]) or { r = 0.75, g = 0.75, b = 0.75 }
+                    self:drawText(line, self.moodleDetailTextPos.x, y, color.r, color.g, color.b, 1, UIFont.Small)
                     y = y + 20
                 end
             end
