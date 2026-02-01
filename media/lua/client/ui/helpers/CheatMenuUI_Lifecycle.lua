@@ -532,6 +532,10 @@ return function(CheatMenuUI, deps)
             h = skillsSectionBottom - skillsSectionTop
         }
 
+        if self.buildProfilesUI then
+            self:buildProfilesUI()
+        end
+
         self:setActiveTab(self.activeTab)
     end
 
@@ -540,6 +544,7 @@ return function(CheatMenuUI, deps)
         data.favorites = data.favorites or {}
         data.presets = data.presets or {}
         data.config = data.config or {}
+        data.profiles = data.profiles or {}
         return data
     end
 
@@ -547,6 +552,7 @@ return function(CheatMenuUI, deps)
         local data = self:getModData()
         self.favorites = data.favorites
         self.presets = data.presets
+        self.profiles = data.profiles or {}
         self.config = data.config or {}
         local needsFlush = false
         local utilsChanged = self:ensureUtilsConfig()
@@ -888,12 +894,25 @@ return function(CheatMenuUI, deps)
         if self.skillResetAllBtn then
             self.skillResetAllBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Skills_ResetAll", "Reset All Skills"))
         end
+        if self.createProfileBtn then
+            self.createProfileBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Profile_Create", "Create"))
+        end
+        if self.renameProfileBtn then
+            self.renameProfileBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Profile_Rename", "Rename"))
+        end
+        if self.deleteProfileBtn then
+            self.deleteProfileBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Profile_Delete", "Delete"))
+        end
+        if self.applyProfileBtn then
+            self.applyProfileBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Profile_Apply", "Apply Profile"))
+        end
         local selectedDefinition = self:getSelectedSkillDefinition()
         local selectedType = selectedDefinition and selectedDefinition.type or nil
         local selectedLevel = self:getSelectedSkillLevel()
         self:populateSkillOptions(selectedType)
         self:populateSkillLevelOptions(selectedLevel)
         self:syncSkillUI()
+        self:refreshProfilesUI()
         self:refreshTargetCombo()
         self:refreshCategoryLabels()
         self:populateUtilsOptions()
@@ -918,6 +937,7 @@ return function(CheatMenuUI, deps)
         data.favorites = self.favorites
         data.presets = self.presets
         data.config = self.config
+        data.profiles = self.profiles
         if ModData.transmit then
             ModData.transmit(constants.MODDATA_KEY)
         end
@@ -935,6 +955,7 @@ return function(CheatMenuUI, deps)
         self:loadPersistentData()
         self:refreshFavoritesUI()
         self:refreshPresetsUI()
+        self:refreshProfilesUI()
         self:populateLanguageOptions(self.config and self.config.language)
         self:populateHotkeyOptions(self.config and self.config.toggleKey)
         self:applyTranslations()
@@ -979,6 +1000,8 @@ return function(CheatMenuUI, deps)
             drawSection(self, self.utilsSection)
         elseif self.activeTab == "skills" then
             drawSection(self, self.skillsSection)
+        elseif self.activeTab == "profiles" then
+            drawSection(self, self.profilesSection)
         end
 
         if self.status.message ~= "" then
@@ -1045,6 +1068,14 @@ return function(CheatMenuUI, deps)
         end
         if self.activeTab == "config" and self.hotkeyLabelPos then
             self:drawText(CheatMenuText.get("UI_ZedToolbox_ConfigHotkey", "Toggle Hotkey"), self.hotkeyLabelPos.x, self.hotkeyLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+        end
+        if self.activeTab == "profiles" then
+            if self.profilesListLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_Profiles", "Profiles"), self.profilesListLabelPos.x, self.profilesListLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.profileNameLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_Profile_Name", "Profile Name"), self.profileNameLabelPos.x, self.profileNameLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
         end
     end
 end

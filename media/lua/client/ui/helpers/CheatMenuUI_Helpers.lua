@@ -159,8 +159,9 @@ local CATEGORY_LABEL_FALLBACKS = {
 }
 
 function helpers.getCategoryLabel(category)
-    local normalized = CATEGORY_LABEL_FALLBACKS[category] and category or "Misc"
-    local fallback = CATEGORY_LABEL_FALLBACKS[normalized] or tostring(category or "Misc")
+    local raw = tostring(category or "Misc")
+    local normalized = CATEGORY_LABEL_FALLBACKS[category] and category or raw
+    local fallback = CATEGORY_LABEL_FALLBACKS[normalized] or raw
     local key = string.format("UI_ZedToolbox_Category_%s", normalized)
     return CheatMenuText.get(key, fallback)
 end

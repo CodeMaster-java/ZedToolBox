@@ -13,6 +13,7 @@ local CheatMenuUtils = require "CheatMenuUtils"
 local attachItemsSection = require "ui/CheatMenuUI_Items"
 local attachUtilsSection = require "ui/CheatMenuUI_Utils"
 local attachSkillsSection = require "ui/CheatMenuUI_Skills"
+local attachProfilesSection = require "ui/CheatMenuUI_Profiles"
 local attachLifecycleSection = require "ui/helpers/CheatMenuUI_Lifecycle"
 local Helpers = require "ui/helpers/CheatMenuUI_Helpers"
 
@@ -117,6 +118,7 @@ function CheatMenuUI:new(x, y)
     o.selectedCategory = nil
     o.favorites = {}
     o.presets = {}
+    o.profiles = {}
     o.config = {}
     o.activeTab = "items"
     o.tabSelector = nil
@@ -125,9 +127,10 @@ function CheatMenuUI:new(x, y)
         { id = "items", labelKey = "UI_ZedToolbox_TabItems", fallback = "Item Spawns" },
         { id = "utils", labelKey = "UI_ZedToolbox_TabUtils", fallback = "Utils" },
         { id = "skills", labelKey = "UI_ZedToolbox_TabSkills", fallback = "Skills" },
+        { id = "profiles", labelKey = "UI_ZedToolbox_TabProfiles", fallback = "Profiles" },
         { id = "config", labelKey = "UI_ZedToolbox_TabConfig", fallback = "Config" }
     }
-    o.tabControls = { items = {}, utils = {}, skills = {}, config = {} }
+    o.tabControls = { items = {}, utils = {}, skills = {}, config = {}, profiles = {} }
     o.utilsSpeedValues = { 1, 1.5, 2, 3, 4, 5 }
     o.utilsLabelPositions = {}
     o.skillDefinitions = buildSkillDefinitions()
@@ -216,6 +219,19 @@ attachSkillsSection(CheatMenuUI, {
     applySkillLevel = applySkillLevel
 })
 
+attachProfilesSection(CheatMenuUI, {
+    constants = LIFECYCLE_CONSTANTS,
+    clamp = clamp,
+    trim = trim,
+    lower = lower,
+    getListSelection = getListSelection,
+    CheatMenuText = CheatMenuText,
+    CheatMenuUtils = CheatMenuUtils,
+    getPlayerCharacter = getPlayerCharacter,
+    getPlayerSkillLevel = getPlayerSkillLevel,
+    applySkillLevel = applySkillLevel
+})
+
 attachLifecycleSection(CheatMenuUI, {
     clamp = clamp,
     CheatMenuItems = CheatMenuItems,
@@ -252,7 +268,11 @@ local GUARD_METHODS = {
     "onNoHungerThirstChanged",
     "onSpeedChanged",
     "onHealClicked",
-    "onClearZombiesClicked"
+    "onClearZombiesClicked",
+    "onProfileCreate",
+    "onProfileApply",
+    "onProfileRename",
+    "onProfileDelete"
 }
 
 for _, methodName in ipairs(GUARD_METHODS) do
