@@ -15,6 +15,7 @@ local attachUtilsSection = require "ui/CheatMenuUI_Utils"
 local attachSkillsSection = require "ui/CheatMenuUI_Skills"
 local attachMoodlesSection = require "ui/CheatMenuUI_Moodles"
 local attachZombiesSection = require "ui/CheatMenuUI_Zombies"
+local attachWorldSection = require "ui/CheatMenuUI_World"
 local attachTraitsSection = require "ui/CheatMenuUI_Traits"
 local attachProfilesSection = require "ui/CheatMenuUI_Profiles"
 local attachLifecycleSection = require "ui/helpers/CheatMenuUI_Lifecycle"
@@ -130,13 +131,14 @@ function CheatMenuUI:new(x, y)
         { id = "items", labelKey = "UI_ZedToolbox_TabItems", fallback = "Item Spawns" },
         { id = "utils", labelKey = "UI_ZedToolbox_TabUtils", fallback = "Utils" },
         { id = "zombies", labelKey = "UI_ZedToolbox_TabZombies", fallback = "Zombies" },
+        { id = "world", labelKey = "UI_ZedToolbox_TabWorld", fallback = "World" },
         { id = "skills", labelKey = "UI_ZedToolbox_TabSkills", fallback = "Skills" },
         { id = "moodles", labelKey = "UI_ZedToolbox_TabMoodles", fallback = "Moodles" },
         { id = "traits", labelKey = "UI_ZedToolbox_TabTraits", fallback = "Traits" },
         { id = "profiles", labelKey = "UI_ZedToolbox_TabProfiles", fallback = "Profiles" },
         { id = "config", labelKey = "UI_ZedToolbox_TabConfig", fallback = "Config" }
     }
-    o.tabControls = { items = {}, utils = {}, zombies = {}, skills = {}, moodles = {}, traits = {}, config = {}, profiles = {} }
+    o.tabControls = { items = {}, utils = {}, zombies = {}, world = {}, skills = {}, moodles = {}, traits = {}, config = {}, profiles = {} }
     o.utilsSpeedValues = { 1, 1.5, 2, 3, 4, 5 }
     o.utilsLabelPositions = {}
     o.skillDefinitions = buildSkillDefinitions()
@@ -223,6 +225,13 @@ attachZombiesSection(CheatMenuUI, {
     getPlayerCharacter = getPlayerCharacter
 })
 
+attachWorldSection(CheatMenuUI, {
+    constants = LIFECYCLE_CONSTANTS,
+    CheatMenuText = CheatMenuText,
+    clamp = clamp,
+    getPlayerCharacter = getPlayerCharacter
+})
+
 attachSkillsSection(CheatMenuUI, {
     buildSkillDefinitions = buildSkillDefinitions,
     clampSkillLevel = clampSkillLevel,
@@ -305,6 +314,14 @@ local GUARD_METHODS = {
     "onZombiesIgnore",
     "onZombiesRestore",
     "onZombiesSpawn",
+    "onWorldSetTime",
+    "onWorldSkipHours",
+    "onWorldSkipDays",
+    "onWorldFreeze",
+    "onWorldUnfreeze",
+    "onWorldApplyMultiplier",
+    "onWorldApplyWeather",
+    "onWorldApplyEvent",
     "onTraitSelected",
     "onTraitAdd",
     "onTraitRemove",

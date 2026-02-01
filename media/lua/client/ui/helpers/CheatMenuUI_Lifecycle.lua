@@ -416,6 +416,10 @@ return function(CheatMenuUI, deps)
             self:buildZombiesUI()
         end
 
+        if self.buildWorldUI then
+            self:buildWorldUI()
+        end
+
         local configContentTop = listTop
         local configComboWidth = 220
         self.languageLabelPos = { x = PADDING, y = configContentTop - 18 }
@@ -635,6 +639,8 @@ return function(CheatMenuUI, deps)
             self:syncMoodlesUI()
         elseif target == "zombies" and self.syncZombiesUI then
             self:syncZombiesUI()
+        elseif target == "world" and self.syncWorldUI then
+            self:syncWorldUI()
         end
     end
 
@@ -969,6 +975,9 @@ return function(CheatMenuUI, deps)
         if self.zombiesSpawnBtn then
             self.zombiesSpawnBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Zombies_Spawn", "Spawn Zombies"))
         end
+        if self.refreshWorldTranslations then
+            self:refreshWorldTranslations()
+        end
         if self.createProfileBtn then
             self.createProfileBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Profile_Create", "Create"))
         end
@@ -992,6 +1001,9 @@ return function(CheatMenuUI, deps)
         end
         if self.syncZombiesUI then
             self:syncZombiesUI()
+        end
+        if self.syncWorldUI then
+            self:syncWorldUI()
         end
         self:refreshProfilesUI()
         if self.refreshMoodlesUI then
@@ -1057,6 +1069,9 @@ return function(CheatMenuUI, deps)
         if self.syncMoodlesUI then
             self:syncMoodlesUI()
         end
+        if self.syncWorldUI then
+            self:syncWorldUI()
+        end
         if self.syncZombiesUI then
             self:syncZombiesUI()
         end
@@ -1101,6 +1116,8 @@ return function(CheatMenuUI, deps)
             drawSection(self, self.skillsSection)
         elseif self.activeTab == "traits" then
             drawSection(self, self.traitsSection)
+        elseif self.activeTab == "world" then
+            drawSection(self, self.worldSection)
         elseif self.activeTab == "zombies" then
             drawSection(self, self.zombiesSection)
         elseif self.activeTab == "moodles" then
@@ -1198,6 +1215,28 @@ return function(CheatMenuUI, deps)
             end
             if self.zombiesSpawnTypeLabelPos then
                 self:drawText(CheatMenuText.get("UI_ZedToolbox_Zombies_Type", "Type (optional)"), self.zombiesSpawnTypeLabelPos.x, self.zombiesSpawnTypeLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+        elseif self.activeTab == "world" then
+            if self.worldHourLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelHour", "Hour"), self.worldHourLabelPos.x, self.worldHourLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.worldMinuteLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelMinute", "Minute"), self.worldMinuteLabelPos.x, self.worldMinuteLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.worldSkipHoursLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelSkipHours", "Skip Hours"), self.worldSkipHoursLabelPos.x, self.worldSkipHoursLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.worldSkipDaysLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelSkipDays", "Skip Days"), self.worldSkipDaysLabelPos.x, self.worldSkipDaysLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.worldMultiplierLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelMultiplier", "Time Multiplier"), self.worldMultiplierLabelPos.x, self.worldMultiplierLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.worldWeatherLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelWeather", "Weather"), self.worldWeatherLabelPos.x, self.worldWeatherLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.worldEventLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelEvent", "Event"), self.worldEventLabelPos.x, self.worldEventLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
             end
         elseif self.activeTab == "moodles" then
             if self.moodlesListLabelPos then
