@@ -412,6 +412,10 @@ return function(CheatMenuUI, deps)
             h = utilsSectionBottom - utilsSectionTop
         }
 
+        if self.buildZombiesUI then
+            self:buildZombiesUI()
+        end
+
         local configContentTop = listTop
         local configComboWidth = 220
         self.languageLabelPos = { x = PADDING, y = configContentTop - 18 }
@@ -629,6 +633,8 @@ return function(CheatMenuUI, deps)
             self:syncTraitsUI()
         elseif target == "moodles" and self.syncMoodlesUI then
             self:syncMoodlesUI()
+        elseif target == "zombies" and self.syncZombiesUI then
+            self:syncZombiesUI()
         end
     end
 
@@ -942,6 +948,27 @@ return function(CheatMenuUI, deps)
         if self.moodlesMaxAllBtn then
             self.moodlesMaxAllBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Moodles_MaxAll", "Max All Moodles"))
         end
+        if self.zombiesKillNearbyBtn then
+            self.zombiesKillNearbyBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Zombies_KillNearby", "Kill Nearby"))
+        end
+        if self.zombiesKillScreenBtn then
+            self.zombiesKillScreenBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Zombies_KillScreen", "Kill On Screen"))
+        end
+        if self.zombiesFreezeBtn then
+            self.zombiesFreezeBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Zombies_Freeze", "Freeze Zombies"))
+        end
+        if self.zombiesUnfreezeBtn then
+            self.zombiesUnfreezeBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Zombies_Unfreeze", "Unfreeze Zombies"))
+        end
+        if self.zombiesIgnoreBtn then
+            self.zombiesIgnoreBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Zombies_Ignore", "Zombies Ignore Player"))
+        end
+        if self.zombiesRestoreBtn then
+            self.zombiesRestoreBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Zombies_Restore", "Restore Behavior"))
+        end
+        if self.zombiesSpawnBtn then
+            self.zombiesSpawnBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Zombies_Spawn", "Spawn Zombies"))
+        end
         if self.createProfileBtn then
             self.createProfileBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Profile_Create", "Create"))
         end
@@ -962,6 +989,9 @@ return function(CheatMenuUI, deps)
         self:syncSkillUI()
         if self.refreshTraitsUI then
             self:refreshTraitsUI()
+        end
+        if self.syncZombiesUI then
+            self:syncZombiesUI()
         end
         self:refreshProfilesUI()
         if self.refreshMoodlesUI then
@@ -1027,6 +1057,9 @@ return function(CheatMenuUI, deps)
         if self.syncMoodlesUI then
             self:syncMoodlesUI()
         end
+        if self.syncZombiesUI then
+            self:syncZombiesUI()
+        end
         if self.activeTab == "items" then
             self.searchBox:focus()
         end
@@ -1068,6 +1101,8 @@ return function(CheatMenuUI, deps)
             drawSection(self, self.skillsSection)
         elseif self.activeTab == "traits" then
             drawSection(self, self.traitsSection)
+        elseif self.activeTab == "zombies" then
+            drawSection(self, self.zombiesSection)
         elseif self.activeTab == "moodles" then
             drawSection(self, self.moodlesSection)
         elseif self.activeTab == "profiles" then
@@ -1153,6 +1188,16 @@ return function(CheatMenuUI, deps)
                     self:drawText(line, self.traitDetailTextPos.x, y, color.r, color.g, color.b, 1, UIFont.Small)
                     y = y + 20
                 end
+            end
+        elseif self.activeTab == "zombies" then
+            if self.zombiesRadiusLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_Zombies_Radius", "Radius"), self.zombiesRadiusLabelPos.x, self.zombiesRadiusLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.zombiesSpawnCountLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_Zombies_Count", "Count"), self.zombiesSpawnCountLabelPos.x, self.zombiesSpawnCountLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.zombiesSpawnTypeLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_Zombies_Type", "Type (optional)"), self.zombiesSpawnTypeLabelPos.x, self.zombiesSpawnTypeLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
             end
         elseif self.activeTab == "moodles" then
             if self.moodlesListLabelPos then
