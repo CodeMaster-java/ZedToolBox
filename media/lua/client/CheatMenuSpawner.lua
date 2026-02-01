@@ -25,8 +25,11 @@ local function spawnOnGround(baseId, quantity, player)
     if not square then
         return false, CheatMenuText.get("UI_ZedToolbox_ErrorGround", "No ground tile available")
     end
-    for _ = 1, quantity do
-        square:AddWorldInventoryItem(baseId, 0, 0, 0)
+    -- Keep a tiny offset so stacks do not overlap perfectly while avoiding heavy per-item work
+    local offset = 0.05
+    for i = 1, quantity do
+        local jitter = (i % 5) * offset
+        square:AddWorldInventoryItem(baseId, jitter, 0, jitter)
     end
     return true, CheatMenuText.get("UI_ZedToolbox_StatusGround", "Spawned %d x %s on ground", quantity, baseId)
 end
@@ -36,8 +39,12 @@ local function spawnInInventory(baseId, quantity, player)
     if not inventory then
         return false, CheatMenuText.get("UI_ZedToolbox_ErrorInventory", "Inventory unavailable")
     end
-    for _ = 1, quantity do
-        inventory:AddItem(baseId)
+    if quantity > 1 and inventory.AddItems then
+        inventory:AddItems(baseId, quantity)
+    else
+        for _ = 1, quantity do
+            inventory:AddItem(baseId)
+        end
     end
     return true, CheatMenuText.get("UI_ZedToolbox_StatusInventory", "Added %d x %s to inventory", quantity, baseId)
 end

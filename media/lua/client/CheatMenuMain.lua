@@ -14,6 +14,23 @@ CheatMenuMain.Config = {
     toggleKey = DEFAULT_TOGGLE_KEY
 }
 
+local function persistToggleKey(keyCode)
+    if not ModData or not ModData.getOrCreate or type(keyCode) ~= "number" then
+        return
+    end
+    local ok, data = pcall(ModData.getOrCreate, MODDATA_KEY)
+    if not ok or type(data) ~= "table" then
+        return
+    end
+    data.config = data.config or {}
+    if data.config.toggleKey ~= keyCode then
+        data.config.toggleKey = keyCode
+        if ModData.transmit then
+            ModData.transmit(MODDATA_KEY)
+        end
+    end
+end
+
 local function readToggleKeyFromModData()
     if not ModData or not ModData.getOrCreate then
         return nil
@@ -44,6 +61,7 @@ function CheatMenuMain.setToggleKey(keyCode)
     if type(keyCode) == "number" then
         CheatMenuMain.Config.toggleKey = keyCode
         CheatMenuMain._cachedToggleKey = keyCode
+        persistToggleKey(keyCode)
     end
 end
 

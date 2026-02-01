@@ -21,6 +21,7 @@ local state = {
     lastSpeedMultiplier = 1,
     lastStaminaBoost = false,
     lastInstantBuild = false,
+    instantBuildBackup = nil,
     lastPlayer = nil,
     forceRefresh = true
 }
@@ -149,25 +150,55 @@ end
 
 local function applyInstantBuildCheat(enabled)
     local buildMenu = _G.ISBuildMenu
-    if type(buildMenu) == "table" then
-        buildMenu.cheat = enabled
-        buildMenu.cheatMenu = enabled
-        buildMenu.cheatBuild = enabled
-        buildMenu.cheatAll = enabled
-        if buildMenu.setCheat then
-            pcall(buildMenu.setCheat, buildMenu, enabled)
-        end
-    end
     local moveMenu = _G.ISMoveableMenu
-    if type(moveMenu) == "table" then
-        moveMenu.cheat = enabled
-        if moveMenu.setCheat then
-            pcall(moveMenu.setCheat, moveMenu, enabled)
+    local craftingUI = _G.ISCraftingUI
+
+    if enabled and not state.instantBuildBackup then
+        state.instantBuildBackup = {
+            buildMenu = buildMenu and {
+                cheat = buildMenu.cheat,
+                cheatMenu = buildMenu.cheatMenu,
+                cheatBuild = buildMenu.cheatBuild,
+                cheatAll = buildMenu.cheatAll
+            } or nil,
+            moveMenu = moveMenu and {
+                cheat = moveMenu.cheat
+            } or nil,
+            craftingUI = craftingUI and {
+                Cheat = craftingUI.Cheat
+            } or nil
+        }
+    end
+
+    if type(buildMenu) == "table" then
+        local target = enabled and true or ((state.instantBuildBackup and state.instantBuildBackup.buildMenu and state.instantBuildBackup.buildMenu.cheat) or false)
+        local targetMenu = enabled and true or ((state.instantBuildBackup and state.instantBuildBackup.buildMenu and state.instantBuildBackup.buildMenu.cheatMenu) or false)
+        local targetBuild = enabled and true or ((state.instantBuildBackup and state.instantBuildBackup.buildMenu and state.instantBuildBackup.buildMenu.cheatBuild) or false)
+        local targetAll = enabled and true or ((state.instantBuildBackup and state.instantBuildBackup.buildMenu and state.instantBuildBackup.buildMenu.cheatAll) or false)
+        buildMenu.cheat = target
+        buildMenu.cheatMenu = targetMenu
+        buildMenu.cheatBuild = targetBuild
+        buildMenu.cheatAll = targetAll
+        if buildMenu.setCheat then
+            pcall(buildMenu.setCheat, buildMenu, target)
         end
     end
-    local craftingUI = _G.ISCraftingUI
+
+    if type(moveMenu) == "table" then
+        local target = enabled and true or ((state.instantBuildBackup and state.instantBuildBackup.moveMenu and state.instantBuildBackup.moveMenu.cheat) or false)
+        moveMenu.cheat = target
+        if moveMenu.setCheat then
+            pcall(moveMenu.setCheat, moveMenu, target)
+        end
+    end
+
     if type(craftingUI) == "table" then
-        craftingUI.Cheat = enabled
+        local target = enabled and true or ((state.instantBuildBackup and state.instantBuildBackup.craftingUI and state.instantBuildBackup.craftingUI.Cheat) or false)
+        craftingUI.Cheat = target
+    end
+
+    if not enabled then
+        state.instantBuildBackup = nil
     end
 end
 

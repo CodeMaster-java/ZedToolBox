@@ -1,6 +1,6 @@
 local CheatMenuItems = {}
 
-local CATEGORY_ORDER = { "Weapons", "Ammo", "Bags", "Food", "Medical", "Misc" }
+local CATEGORY_ORDER = { "Weapons", "Ammo", "Bags", "Food", "Medical", "Tools", "Clothing", "Books", "Misc" }
 
 local CATEGORY_RULES = {
     Weapons = {
@@ -17,6 +17,15 @@ local CATEGORY_RULES = {
     },
     Medical = {
         displays = { medical = true, medicine = true, bandage = true }
+    },
+    Tools = {
+        displays = { tool = true, repair = true, craft = true, survivalist = true }
+    },
+    Clothing = {
+        displays = { clothing = true, armor = true, apparel = true }
+    },
+    Books = {
+        displays = { literature = true, book = true, magazine = true, skillbook = true }
     }
 }
 
