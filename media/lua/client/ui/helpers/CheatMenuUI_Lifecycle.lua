@@ -47,10 +47,16 @@ return function(CheatMenuUI, deps)
         self:populateSkillOptions()
         self:populateSkillLevelOptions(0)
         self:syncSkillUI()
+        if self.refreshTraitsUI then
+            self:refreshTraitsUI()
+        end
         self:refreshCatalog()
         self:loadPersistentData()
         self:refreshFavoritesUI()
         self:refreshPresetsUI()
+        if self.refreshTraitsUI then
+            self:refreshTraitsUI()
+        end
         self:populateHotkeyOptions(self.config and self.config.toggleKey)
         self:populateLanguageOptions()
         self:applyTranslations()
@@ -532,6 +538,10 @@ return function(CheatMenuUI, deps)
             h = skillsSectionBottom - skillsSectionTop
         }
 
+        if self.buildTraitsUI then
+            self:buildTraitsUI()
+        end
+
         if self.buildProfilesUI then
             self:buildProfilesUI()
         end
@@ -611,6 +621,8 @@ return function(CheatMenuUI, deps)
         end
         if target == "skills" then
             self:syncSkillUI()
+        elseif target == "traits" and self.syncTraitsUI then
+            self:syncTraitsUI()
         end
     end
 
@@ -894,6 +906,21 @@ return function(CheatMenuUI, deps)
         if self.skillResetAllBtn then
             self.skillResetAllBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Skills_ResetAll", "Reset All Skills"))
         end
+        if self.addTraitBtn then
+            self.addTraitBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Traits_Add", "Add Trait"))
+        end
+        if self.removeTraitBtn then
+            self.removeTraitBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Traits_Remove", "Remove Trait"))
+        end
+        if self.resetTraitsBtn then
+            self.resetTraitsBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Traits_Reset", "Reset Traits"))
+        end
+        if self.addAllPositiveTraitsBtn then
+            self.addAllPositiveTraitsBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Traits_AddAllPositive", "Apply All Positive"))
+        end
+        if self.addAllNegativeTraitsBtn then
+            self.addAllNegativeTraitsBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Traits_AddAllNegative", "Apply All Negative"))
+        end
         if self.createProfileBtn then
             self.createProfileBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_Profile_Create", "Create"))
         end
@@ -912,6 +939,9 @@ return function(CheatMenuUI, deps)
         self:populateSkillOptions(selectedType)
         self:populateSkillLevelOptions(selectedLevel)
         self:syncSkillUI()
+        if self.refreshTraitsUI then
+            self:refreshTraitsUI()
+        end
         self:refreshProfilesUI()
         self:refreshTargetCombo()
         self:refreshCategoryLabels()
@@ -956,11 +986,17 @@ return function(CheatMenuUI, deps)
         self:refreshFavoritesUI()
         self:refreshPresetsUI()
         self:refreshProfilesUI()
+        if self.refreshTraitsUI then
+            self:refreshTraitsUI()
+        end
         self:populateLanguageOptions(self.config and self.config.language)
         self:populateHotkeyOptions(self.config and self.config.toggleKey)
         self:applyTranslations()
         self:setActiveTab(self.activeTab)
         self:syncSkillUI()
+        if self.syncTraitsUI then
+            self:syncTraitsUI()
+        end
         if self.activeTab == "items" then
             self.searchBox:focus()
         end
@@ -1000,6 +1036,8 @@ return function(CheatMenuUI, deps)
             drawSection(self, self.utilsSection)
         elseif self.activeTab == "skills" then
             drawSection(self, self.skillsSection)
+        elseif self.activeTab == "traits" then
+            drawSection(self, self.traitsSection)
         elseif self.activeTab == "profiles" then
             drawSection(self, self.profilesSection)
         end
@@ -1068,6 +1106,22 @@ return function(CheatMenuUI, deps)
         end
         if self.activeTab == "config" and self.hotkeyLabelPos then
             self:drawText(CheatMenuText.get("UI_ZedToolbox_ConfigHotkey", "Toggle Hotkey"), self.hotkeyLabelPos.x, self.hotkeyLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+        end
+        if self.activeTab == "traits" then
+            if self.traitsListLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_Traits", "Traits"), self.traitsListLabelPos.x, self.traitsListLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.traitDetailLabelPos then
+                self:drawText(CheatMenuText.get("UI_ZedToolbox_Traits_Details", "Details"), self.traitDetailLabelPos.x, self.traitDetailLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            end
+            if self.traitDetail and self.traitDetail.lines and self.traitDetailTextPos then
+                local y = self.traitDetailTextPos.y
+                for index, line in ipairs(self.traitDetail.lines) do
+                    local color = (self.traitDetail.colors and self.traitDetail.colors[index]) or { r = 0.75, g = 0.75, b = 0.75 }
+                    self:drawText(line, self.traitDetailTextPos.x, y, color.r, color.g, color.b, 1, UIFont.Small)
+                    y = y + 20
+                end
+            end
         end
         if self.activeTab == "profiles" then
             if self.profilesListLabelPos then
