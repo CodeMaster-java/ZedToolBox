@@ -13,26 +13,12 @@ return function(CheatMenuUI, deps)
     local CheatMenuUtils = deps.CheatMenuUtils
     local clamp = deps.clamp
     local getPlayerCharacter = deps.getPlayerCharacter
+    local CheatMenuSession = require "CheatMenuSession"
 
     local RADIUS_MIN = 1
     local RADIUS_MAX = 50
     local SPAWN_MIN = 1
     local SPAWN_MAX = 50
-
-    local function isSingleplayer()
-        if isClient and isClient() then
-            return false
-        end
-        return true
-    end
-
-    local function ensureSingleplayer(self)
-        if isSingleplayer() then
-            return true
-        end
-        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Zombies_StatusSingleplayer", "Singleplayer only."))
-        return false
-    end
 
     local function getCellZombies()
         local cell = getCell and getCell() or nil
@@ -132,18 +118,17 @@ return function(CheatMenuUI, deps)
         local z = player:getZ()
         local spawned = 0
         local ok, result = pcall(function()
-            if addZombiesInOutfit then
+            if type(addZombiesInOutfit) == "function" then
                 return addZombiesInOutfit(x, y, z, count, zombieType or "", nil)
             end
-            if addZombies then
+            if type(addZombies) == "function" then
                 return addZombies(x, y, z, count)
             end
             return 0
         end)
         if ok and result then
             spawned = tonumber(result) or spawned
-        end
-        if spawned <= 0 and ok then
+        elseif ok then
             spawned = count
         end
         return spawned
@@ -180,7 +165,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onZombiesKillNearby()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_Zombies_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local radius = self:getZombiesRadius()
@@ -194,7 +179,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onZombiesKillScreen()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_Zombies_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local cleared = killOnScreen()
@@ -206,7 +191,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onZombiesFreeze()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_Zombies_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local applied = forEachZombie(nil, function(z)
@@ -216,7 +201,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onZombiesUnfreeze()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_Zombies_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local applied = forEachZombie(nil, function(z)
@@ -226,7 +211,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onZombiesIgnore()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_Zombies_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local applied = forEachZombie(nil, function(z)
@@ -236,7 +221,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onZombiesRestore()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_Zombies_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local applied = forEachZombie(nil, function(z)
@@ -248,7 +233,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onZombiesSpawn()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_Zombies_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local count = self:getZombiesSpawnCount()

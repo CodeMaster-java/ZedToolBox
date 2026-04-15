@@ -107,19 +107,19 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onSkillApplyLevel()
 		local definition = self:getSelectedSkillDefinition()
 		if not definition then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+			self:statusSelectSkill()
 			return
 		end
 		local targetLevel = self:getSelectedSkillLevel()
 		local player = getPlayerCharacter()
 		if not player then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+			self:statusPlayerNotReady()
 			return
 		end
 		local success = applySkillLevel(player, definition, targetLevel)
 		if success then
 			self:syncSkillUI()
-			self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), targetLevel))
+			self:statusSkillUpdated(tostring(definition.label or definition.id), targetLevel)
 		else
 			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
 		end
@@ -128,12 +128,12 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onSkillIncrease()
 		local definition = self:getSelectedSkillDefinition()
 		if not definition then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+			self:statusSelectSkill()
 			return
 		end
 		local player = getPlayerCharacter()
 		if not player then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+			self:statusPlayerNotReady()
 			return
 		end
 		local currentLevel = getPlayerSkillLevel(player, definition)
@@ -144,7 +144,7 @@ return function(CheatMenuUI, deps)
 		local success = applySkillLevel(player, definition, currentLevel + 1)
 		if success then
 			self:syncSkillUI()
-			self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), currentLevel + 1))
+			self:statusSkillUpdated(tostring(definition.label or definition.id), currentLevel + 1)
 		else
 			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
 		end
@@ -153,12 +153,12 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onSkillDecrease()
 		local definition = self:getSelectedSkillDefinition()
 		if not definition then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+			self:statusSelectSkill()
 			return
 		end
 		local player = getPlayerCharacter()
 		if not player then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+			self:statusPlayerNotReady()
 			return
 		end
 		local currentLevel = getPlayerSkillLevel(player, definition)
@@ -169,7 +169,7 @@ return function(CheatMenuUI, deps)
 		local success = applySkillLevel(player, definition, currentLevel - 1)
 		if success then
 			self:syncSkillUI()
-			self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), currentLevel - 1))
+			self:statusSkillUpdated(tostring(definition.label or definition.id), currentLevel - 1)
 		else
 			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
 		end
@@ -178,18 +178,18 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onSkillMaxSelected()
 		local definition = self:getSelectedSkillDefinition()
 		if not definition then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+			self:statusSelectSkill()
 			return
 		end
 		local player = getPlayerCharacter()
 		if not player then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+			self:statusPlayerNotReady()
 			return
 		end
 		local success = applySkillLevel(player, definition, MAX_SKILL_LEVEL)
 		if success then
 			self:syncSkillUI()
-			self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), MAX_SKILL_LEVEL))
+			self:statusSkillUpdated(tostring(definition.label or definition.id), MAX_SKILL_LEVEL)
 		else
 			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
 		end
@@ -198,18 +198,18 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onSkillResetSelected()
 		local definition = self:getSelectedSkillDefinition()
 		if not definition then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first."))
+			self:statusSelectSkill()
 			return
 		end
 		local player = getPlayerCharacter()
 		if not player then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+			self:statusPlayerNotReady()
 			return
 		end
 		local success = applySkillLevel(player, definition, 0)
 		if success then
 			self:syncSkillUI()
-			self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", tostring(definition.label or definition.id), 0))
+			self:statusSkillUpdated(tostring(definition.label or definition.id), 0)
 		else
 			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusSkillFailed", "Could not update skills."))
 		end
@@ -218,7 +218,7 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onSkillMaxAll()
 		local player = getPlayerCharacter()
 		if not player then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+			self:statusPlayerNotReady()
 			return
 		end
 		local anySuccess = false
@@ -235,7 +235,7 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onSkillResetAll()
 		local player = getPlayerCharacter()
 		if not player then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+			self:statusPlayerNotReady()
 			return
 		end
 		local anySuccess = false

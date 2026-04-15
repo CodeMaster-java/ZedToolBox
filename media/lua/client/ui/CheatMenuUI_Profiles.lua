@@ -132,18 +132,18 @@ return function(CheatMenuUI, deps)
         table.insert(self.profiles, profile)
         self:refreshProfilesUI()
         self:flushPersistentData()
-        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_Profile_Saved", "Profile saved."))
+        self:statusProfileSaved()
     end
 
     function CheatMenuUI:onProfileApply()
         local profile = self:getSelectedProfile()
         if not profile then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Profile_Select", "Select a profile first."))
+            self:statusSelectProfile()
             return
         end
         local player = getPlayerCharacter()
         if not player then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+            self:statusPlayerNotReady()
             return
         end
         self.config = self.config or {}
@@ -163,7 +163,7 @@ return function(CheatMenuUI, deps)
     function CheatMenuUI:onProfileRename()
         local profile = self:getSelectedProfile()
         if not profile or not self.profileNameBox then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Profile_Select", "Select a profile first."))
+            self:statusSelectProfile()
             return
         end
         local newName = trim(self.profileNameBox:getInternalText() or "")
@@ -180,13 +180,13 @@ return function(CheatMenuUI, deps)
         profile.name = newName
         self:refreshProfilesUI()
         self:flushPersistentData()
-        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_Profile_Renamed", "Profile renamed."))
+        self:statusProfileRenamed()
     end
 
     function CheatMenuUI:onProfileDelete()
         local profile = self:getSelectedProfile()
         if not profile then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Profile_Select", "Select a profile first."))
+            self:statusSelectProfile()
             return
         end
         for index, entry in ipairs(self.profiles or {}) do
@@ -197,7 +197,7 @@ return function(CheatMenuUI, deps)
         end
         self:refreshProfilesUI()
         self:flushPersistentData()
-        self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_Profile_Deleted", "Profile deleted."))
+        self:statusProfileDeleted()
     end
 
     function CheatMenuUI:buildProfilesUI()

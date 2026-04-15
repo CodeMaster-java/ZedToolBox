@@ -40,6 +40,20 @@ return function(CheatMenuUI, deps)
     local CREDIT_TEXT = constants.CREDIT_TEXT
     local STATUS_SUCCESS = constants.STATUS_SUCCESS
     local STATUS_ERROR = constants.STATUS_ERROR
+    local STATUS_BAR_HEIGHT = 28
+    local STATUS_BAR_Y = 18
+
+    local function ellipsize(text, maxChars)
+        text = tostring(text or "")
+        maxChars = tonumber(maxChars) or 0
+        if maxChars <= 0 or #text <= maxChars then
+            return text
+        end
+        if maxChars <= 3 then
+            return text:sub(1, maxChars)
+        end
+        return text:sub(1, maxChars - 3) .. "..."
+    end
 
     function CheatMenuUI:initialise()
         ISPanel.initialise(self)
@@ -562,7 +576,23 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:getModData()
-        local data = ModData.getOrCreate(constants.MODDATA_KEY)
+        if not ModData or type(ModData.getOrCreate) ~= "function" then
+            return {
+                favorites = self.favorites or {},
+                presets = self.presets or {},
+                config = self.config or {},
+                profiles = self.profiles or {}
+            }
+        end
+        local ok, data = pcall(ModData.getOrCreate, constants.MODDATA_KEY)
+        if not ok or type(data) ~= "table" then
+            return {
+                favorites = self.favorites or {},
+                presets = self.presets or {},
+                config = self.config or {},
+                profiles = self.profiles or {}
+            }
+        end
         data.favorites = data.favorites or {}
         data.presets = data.presets or {}
         data.config = data.config or {}
@@ -1029,19 +1059,118 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:flushPersistentData()
+        if not ModData or type(ModData.transmit) ~= "function" then
+            return
+        end
         local data = self:getModData()
         data.favorites = self.favorites
         data.presets = self.presets
         data.config = self.config
         data.profiles = self.profiles
-        if ModData.transmit then
-            ModData.transmit(constants.MODDATA_KEY)
-        end
+        ModData.transmit(constants.MODDATA_KEY)
     end
 
     function CheatMenuUI:setStatus(success, message)
-        self.status.message = message or ""
+        self.status.message = tostring(message or "")
         self.status.color = success and constants.STATUS_SUCCESS or constants.STATUS_ERROR
+    end
+
+    function CheatMenuUI:statusError(messageKey, fallback, ...)
+        self:setStatus(false, CheatMenuText.get(messageKey, fallback, ...))
+    end
+
+    function CheatMenuUI:statusPlayerNotReady()
+        self:statusError("UI_ZedToolbox_ErrorPlayer", "Player not ready.")
+    end
+
+    function CheatMenuUI:statusSelectSkill()
+        self:statusError("UI_ZedToolbox_Skills_StatusNoSkill", "Select a skill first.")
+    end
+
+    function CheatMenuUI:statusSelectTrait()
+        self:statusError("UI_ZedToolbox_Traits_Select", "Select a trait first.")
+    end
+
+    function CheatMenuUI:statusSelectMoodle()
+        self:statusError("UI_ZedToolbox_Moodles_Select", "Select a moodle first.")
+    end
+
+    function CheatMenuUI:statusSelectProfile()
+        self:statusError("UI_ZedToolbox_Profile_Select", "Select a profile first.")
+    end
+
+    function CheatMenuUI:statusSelectFavorite()
+        self:statusError("UI_ZedToolbox_StatusFavoriteMissing", "Select a favorite first.")
+    end
+
+    function CheatMenuUI:statusSelectPreset()
+        self:statusError("UI_ZedToolbox_StatusPresetMissingSelect", "Select a preset first.")
+    end
+
+    function CheatMenuUI:statusSuccess(messageKey, fallback, ...)
+        self:setStatus(true, CheatMenuText.get(messageKey, fallback, ...))
+    end
+
+    function CheatMenuUI:statusFavoriteSaved()
+        self:statusSuccess("UI_ZedToolbox_StatusFavoriteSaved", "Favorite saved.")
+    end
+
+    function CheatMenuUI:statusFavoriteLoaded()
+        self:statusSuccess("UI_ZedToolbox_StatusFavoriteLoaded", "Favorite applied.")
+    end
+
+    function CheatMenuUI:statusFavoriteRemoved()
+        self:statusSuccess("UI_ZedToolbox_StatusFavoriteRemoved", "Favorite removed.")
+    end
+
+    function CheatMenuUI:statusPresetSaved()
+        self:statusSuccess("UI_ZedToolbox_StatusPresetSaved", "Preset saved.")
+    end
+
+    function CheatMenuUI:statusPresetLoaded()
+        self:statusSuccess("UI_ZedToolbox_StatusPresetLoaded", "Preset applied.")
+    end
+
+    function CheatMenuUI:statusPresetRemoved()
+        self:statusSuccess("UI_ZedToolbox_StatusPresetRemoved", "Preset removed.")
+    end
+
+    function CheatMenuUI:statusProfileSaved()
+        self:statusSuccess("UI_ZedToolbox_Profile_Saved", "Profile saved.")
+    end
+
+    function CheatMenuUI:statusProfileRenamed()
+        self:statusSuccess("UI_ZedToolbox_Profile_Renamed", "Profile renamed.")
+    end
+
+    function CheatMenuUI:statusProfileDeleted()
+        self:statusSuccess("UI_ZedToolbox_Profile_Deleted", "Profile deleted.")
+    end
+
+    function CheatMenuUI:statusSkillUpdated(skillName, level)
+        self:statusSuccess("UI_ZedToolbox_StatusSkillUpdated", "%1 set to level %2.", skillName, level)
+    end
+
+    function CheatMenuUI:statusToggle(enabled, onKey, offKey, onFallback, offFallback)
+        local key = enabled and onKey or offKey
+        local fallback = enabled and onFallback or offFallback
+        self:statusSuccess(key, fallback)
+    end
+
+    function CheatMenuUI:statusSpeedApplied(multiplier)
+        self:statusSuccess("UI_ZedToolbox_StatusSpeedApplied", "Speed set to %1x.", multiplier)
+    end
+
+    function CheatMenuUI:statusHealed()
+        self:statusSuccess("UI_ZedToolbox_StatusHealed", "Player fully healed.")
+    end
+
+    function CheatMenuUI:statusClearZombies(cleared, radius)
+        if cleared > 0 then
+            self:statusSuccess("UI_ZedToolbox_StatusClearZombies", "%1 zombies removed within %2 tiles.", cleared, radius)
+        else
+            self:statusSuccess("UI_ZedToolbox_StatusClearZombiesNone", "No zombies found within %1 tiles.", radius)
+        end
     end
 
     function CheatMenuUI:show()
@@ -1126,11 +1255,18 @@ return function(CheatMenuUI, deps)
             drawSection(self, self.profilesSection)
         end
 
+        local footerY = self.height - STATUS_BAR_HEIGHT - STATUS_BAR_Y
+        self:drawRect(0, footerY, self.width, STATUS_BAR_HEIGHT, 0.78, 0.05, 0.05, 0.05)
+        self:drawRect(0, footerY, self.width, 1, 0.55, self.status.color.r, self.status.color.g, self.status.color.b)
+        self:drawRect(0, footerY, 4, STATUS_BAR_HEIGHT, 0.9, self.status.color.r, self.status.color.g, self.status.color.b)
         if self.status.message ~= "" then
-            self:drawText(self.status.message, PADDING, self.height - 36, self.status.color.r, self.status.color.g, self.status.color.b, 1, UIFont.Small)
+            local messageWidth = self.width - (PADDING * 2) - 120
+            local maxChars = math.max(24, math.floor(messageWidth / 7))
+            local statusText = ellipsize(self.status.message, maxChars)
+            self:drawText(statusText, PADDING + 10, footerY + 6, self.status.color.r, self.status.color.g, self.status.color.b, 1, UIFont.Small)
         end
 
-        self:drawTextRight(CREDIT_TEXT, self.width - PADDING, self.height - 20, 0.7, 0.7, 0.7, 1, UIFont.Small)
+        self:drawTextRight(CREDIT_TEXT, self.width - PADDING, footerY + 8, 0.7, 0.7, 0.7, 1, UIFont.Small)
 
         self:drawTextCentre(CheatMenuText.get("UI_ZedToolbox_Title", "Zed Tool"), self.width / 2, 12, 1, 1, 1, 1, UIFont.Medium)
         if self.activeTab == "items" and self.searchLabelPos then

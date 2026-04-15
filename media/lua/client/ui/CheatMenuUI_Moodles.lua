@@ -218,12 +218,12 @@ return function(CheatMenuUI, deps)
     local function applyCurrentMoodle(self, targetValue)
         local entry = self:getSelectedMoodleEntry()
         if not entry or not entry.definition then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Moodles_Select", "Select a moodle first."))
+            self:statusSelectMoodle()
             return
         end
         local player = getPlayerCharacter()
         if not player then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+            self:statusPlayerNotReady()
             return
         end
         local success = setMoodleValue(player, entry.definition, targetValue)
@@ -240,7 +240,7 @@ return function(CheatMenuUI, deps)
     function CheatMenuUI:onMoodleSetMin()
         local entry = self:getSelectedMoodleEntry()
         if not entry then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Moodles_Select", "Select a moodle first."))
+            self:statusSelectMoodle()
             return
         end
         applyCurrentMoodle(self, entry.min or 0)
@@ -249,7 +249,7 @@ return function(CheatMenuUI, deps)
     function CheatMenuUI:onMoodleSetMax()
         local entry = self:getSelectedMoodleEntry()
         if not entry then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Moodles_Select", "Select a moodle first."))
+            self:statusSelectMoodle()
             return
         end
         applyCurrentMoodle(self, entry.max or 1)
@@ -258,7 +258,7 @@ return function(CheatMenuUI, deps)
     function CheatMenuUI:onMoodleNormalize()
         local entry = self:getSelectedMoodleEntry()
         if not entry then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Moodles_Select", "Select a moodle first."))
+            self:statusSelectMoodle()
             return
         end
         applyCurrentMoodle(self, entry.min or 0)
@@ -267,7 +267,7 @@ return function(CheatMenuUI, deps)
     function CheatMenuUI:onMoodlesClearNegative()
         local player = getPlayerCharacter()
         if not player then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+            self:statusPlayerNotReady()
             return
         end
         self:refreshMoodleDefinitions()
@@ -286,7 +286,7 @@ return function(CheatMenuUI, deps)
     function CheatMenuUI:onMoodlesMaxAll()
         local player = getPlayerCharacter()
         if not player then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+            self:statusPlayerNotReady()
             return
         end
         self:refreshMoodleDefinitions()

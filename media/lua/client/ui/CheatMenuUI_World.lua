@@ -11,6 +11,7 @@ return function(CheatMenuUI, deps)
 
     local CheatMenuText = deps.CheatMenuText
     local clamp = deps.clamp
+    local CheatMenuSession = require "CheatMenuSession"
 
     local HOUR_MIN = 0
     local HOUR_MAX = 23
@@ -22,6 +23,13 @@ return function(CheatMenuUI, deps)
     local SKIP_HOURS_MAX = 240
     local SKIP_DAYS_MIN = 1
     local SKIP_DAYS_MAX = 365
+    local WEATHER_STAGE_SHOWERS = 1
+    local WEATHER_STAGE_STORM = 3
+    local WEATHER_FOG_INTENSITY = 1
+    local GUNSHOT_RADIUS = 500
+    local GUNSHOT_VOLUME = 500
+    local SCREAM_RADIUS = 350
+    local SCREAM_VOLUME = 350
 
     local weatherOptions = {
         { id = "clear", labelKey = "UI_ZedToolbox_World_WeatherClear", fallback = "Clear" },
@@ -123,18 +131,19 @@ return function(CheatMenuUI, deps)
         return ok and result ~= nil or ok
     end
 
-    local function isSingleplayer()
-        if isClient and isClient() then
+    local function triggerWorldSound(player, radius, volume)
+        if not player then
             return false
         end
-        return true
-    end
-
-    local function ensureSingleplayer(self)
-        if isSingleplayer() then
+        if safeCall(player, "addWorldSoundUnlessInvisible", radius, volume, false) then
             return true
         end
-        self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_World_StatusSingleplayer", "Singleplayer only."))
+        local okX, x = pcall(function() return player:getX() end)
+        local okY, y = pcall(function() return player:getY() end)
+        local okZ, z = pcall(function() return player:getZ() end)
+        if okX and okY and okZ then
+            return safeCall(_G, "addSound", player, x, y, z, radius, volume)
+        end
         return false
     end
 
@@ -228,54 +237,42 @@ return function(CheatMenuUI, deps)
     end
 
     local function applyWeather(mode)
-        local gt = getGameTimeSafe()
         local climate = getClimateManagerSafe()
+        if not climate then
+            return false
+        end
         local success = false
         if mode == "clear" then
-            success = safeCall(gt, "setRaining", false) or success
-            success = safeCall(gt, "setRainIntensity", 0) or success
-            success = safeCall(climate, "setRainIntensity", 0) or success
+            success = safeCall(climate, "transmitStopWeather") or success
+            success = safeCall(climate, "stopWeatherAndThunder") or success
             success = safeCall(climate, "stopWeather") or success
             success = safeCall(climate, "setFogIntensity", 0) or success
         elseif mode == "rain" then
-            success = safeCall(gt, "setRaining", true) or success
-            success = safeCall(gt, "setRainIntensity", 1) or success
-            success = safeCall(climate, "setRainIntensity", 1) or success
-            success = safeCall(climate, "startWeather", "rain") or success
-            success = safeCall(climate, "triggerCustomWeather", "rain") or success
+            success = safeCall(climate, "triggerCustomWeatherStage", WEATHER_STAGE_SHOWERS, 48) or success
+            success = safeCall(climate, "triggerCustomWeather", 0.35, true) or success
+            success = safeCall(climate, "setFogIntensity", 0) or success
         elseif mode == "storm" then
-            success = safeCall(gt, "setRaining", true) or success
-            success = safeCall(gt, "setRainIntensity", 1) or success
-            success = safeCall(gt, "setThunderStorm", true) or success
-            success = safeCall(climate, "setRainIntensity", 1) or success
-            success = safeCall(climate, "triggerStorm") or success
-            success = safeCall(climate, "triggerCustomWeather", "storm") or success
+            success = safeCall(climate, "transmitTriggerStorm", 48) or success
+            success = safeCall(climate, "triggerCustomWeatherStage", WEATHER_STAGE_STORM, 48) or success
+            success = safeCall(climate, "setFogIntensity", 0) or success
         elseif mode == "fog" then
-            success = safeCall(gt, "setFogIntensity", 1) or success
-            success = safeCall(climate, "setFogIntensity", 1) or success
+            success = safeCall(climate, "setFogIntensity", WEATHER_FOG_INTENSITY) or success
+            success = safeCall(climate, "setRaining", false) or success
         end
         return success
     end
 
     local function triggerEvent(eventId)
+        local player = CheatMenuSession.getPlayerObject()
         local triggered = false
         if eventId == "helicopter" then
-            local gt = getGameTimeSafe()
-            triggered = safeCall(gt, "triggerHelicopter") or triggered
-            if _G.MetaEvent and _G.MetaEvent.triggerEvent then
-                triggered = triggered or safeCall(_G.MetaEvent, "triggerEvent", "Helicopter")
-                triggered = triggered or safeCall(_G.MetaEvent, "triggerEvent", "helicopter")
+            if type(_G.testHelicopter) == "function" then
+                triggered = pcall(_G.testHelicopter)
             end
         elseif eventId == "gunshot" then
-            if _G.MetaEvent and _G.MetaEvent.triggerEvent then
-                triggered = safeCall(_G.MetaEvent, "triggerEvent", "gunshot") or triggered
-                triggered = triggered or safeCall(_G.MetaEvent, "triggerEvent", "Gunshot")
-            end
+            triggered = triggerWorldSound(player, GUNSHOT_RADIUS, GUNSHOT_VOLUME)
         elseif eventId == "screamer" then
-            if _G.MetaEvent and _G.MetaEvent.triggerEvent then
-                triggered = safeCall(_G.MetaEvent, "triggerEvent", "screamer") or triggered
-                triggered = triggered or safeCall(_G.MetaEvent, "triggerEvent", "Screamer")
-            end
+            triggered = triggerWorldSound(player, SCREAM_RADIUS, SCREAM_VOLUME)
         end
         return triggered
     end
@@ -300,7 +297,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onWorldSetTime()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_World_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local hour = tonumber(self.worldHourEntry and self.worldHourEntry:getText()) or 0
@@ -311,7 +308,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onWorldSkipHours()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_World_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local hours = tonumber(self.worldSkipHoursEntry and self.worldSkipHoursEntry:getText()) or SKIP_HOURS_MIN
@@ -322,7 +319,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onWorldSkipDays()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_World_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local days = tonumber(self.worldSkipDaysEntry and self.worldSkipDaysEntry:getText()) or SKIP_DAYS_MIN
@@ -333,7 +330,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onWorldFreeze()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_World_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         self.worldMultiplierBackup = self.worldMultiplierBackup or getMultiplier()
@@ -343,7 +340,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onWorldUnfreeze()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_World_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local target = self.worldMultiplierBackup or 1
@@ -354,7 +351,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onWorldApplyMultiplier()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_World_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local multiplier = tonumber(self.worldMultiplierEntry and self.worldMultiplierEntry:getText()) or 1
@@ -368,7 +365,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onWorldApplyWeather()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_World_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local selected = self.worldWeatherCombo and self.worldWeatherCombo.options and self.worldWeatherCombo.options[self.worldWeatherCombo.selected]
@@ -378,7 +375,7 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:onWorldApplyEvent()
-        if not ensureSingleplayer(self) then
+        if not CheatMenuSession.ensureSingleplayer(self, CheatMenuText.get("UI_ZedToolbox_World_StatusSingleplayer", "Singleplayer only.")) then
             return
         end
         local selected = self.worldEventCombo and self.worldEventCombo.options and self.worldEventCombo.options[self.worldEventCombo.selected]

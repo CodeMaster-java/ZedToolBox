@@ -195,7 +195,7 @@ return function(CheatMenuUI, deps)
 		table.insert(self.favorites, { baseId = baseId, label = label })
 		self:refreshFavoritesUI()
 		self:flushPersistentData()
-		self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusFavoriteSaved", "Favorite saved."))
+		self:statusFavoriteSaved()
 	end
 
 	function CheatMenuUI:onFavoriteSelected()
@@ -208,17 +208,17 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onUseFavorite()
 		local entry = self:getSelectedFavorite()
 		if not entry then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusFavoriteMissing", "Select a favorite first."))
+			self:statusSelectFavorite()
 			return
 		end
 		self.baseIdBox:setText(entry.baseId)
-		self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusFavoriteLoaded", "Favorite applied."))
+		self:statusFavoriteLoaded()
 	end
 
 	function CheatMenuUI:onSpawnFavorite()
 		local entry = self:getSelectedFavorite()
 		if not entry then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusFavoriteMissing", "Select a favorite first."))
+			self:statusSelectFavorite()
 			return
 		end
 		local success, message = CheatMenuSpawner.spawn(entry.baseId, self.quantityBox:getInternalText(), self:getTargetSelection())
@@ -228,7 +228,7 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onRemoveFavorite()
 		local entry = self:getSelectedFavorite()
 		if not entry then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusFavoriteMissing", "Select a favorite first."))
+			self:statusSelectFavorite()
 			return
 		end
 		for index, value in ipairs(self.favorites) do
@@ -239,7 +239,7 @@ return function(CheatMenuUI, deps)
 		end
 		self:refreshFavoritesUI()
 		self:flushPersistentData()
-		self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusFavoriteRemoved", "Favorite removed."))
+		self:statusFavoriteRemoved()
 	end
 
 	function CheatMenuUI:onSavePreset()
@@ -266,7 +266,7 @@ return function(CheatMenuUI, deps)
 		end
 		self:refreshPresetsUI()
 		self:flushPersistentData()
-		self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusPresetSaved", "Preset saved."))
+		self:statusPresetSaved()
 	end
 
 	function CheatMenuUI:onPresetSelected()
@@ -281,19 +281,19 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onApplyPreset()
 		local preset = self:getSelectedPreset()
 		if not preset then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusPresetMissingSelect", "Select a preset first."))
+			self:statusSelectPreset()
 			return
 		end
 		self.baseIdBox:setText(preset.baseId)
 		self.quantityBox:setText(tostring(preset.quantity))
 		self:setTargetSelection(preset.target)
-		self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusPresetLoaded", "Preset applied."))
+		self:statusPresetLoaded()
 	end
 
 	function CheatMenuUI:onSpawnPreset()
 		local preset = self:getSelectedPreset()
 		if not preset then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusPresetMissingSelect", "Select a preset first."))
+			self:statusSelectPreset()
 			return
 		end
 		local success, message = CheatMenuSpawner.spawn(preset.baseId, preset.quantity, preset.target)
@@ -303,7 +303,7 @@ return function(CheatMenuUI, deps)
 	function CheatMenuUI:onRemovePreset()
 		local preset = self:getSelectedPreset()
 		if not preset then
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusPresetMissingSelect", "Select a preset first."))
+			self:statusSelectPreset()
 			return
 		end
 		for index, entry in ipairs(self.presets) do
@@ -314,7 +314,7 @@ return function(CheatMenuUI, deps)
 		end
 		self:refreshPresetsUI()
 		self:flushPersistentData()
-		self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusPresetRemoved", "Preset removed."))
+		self:statusPresetRemoved()
 	end
 
 	function CheatMenuUI:onSpawnClicked()

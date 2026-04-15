@@ -4,6 +4,7 @@ if not ok then
 end
 
 local CheatMenuLogger = require "CheatMenuLogger"
+local CheatMenuSession = require "CheatMenuSession"
 
 local CheatMenuMain = {}
 
@@ -65,17 +66,6 @@ function CheatMenuMain.setToggleKey(keyCode)
     end
 end
 
-local function isSingleplayer()
-    if isMultiplayer and isMultiplayer() then
-        return false
-    end
-    return not isClient() and not isServer()
-end
-
-local function playerReady()
-    return getSpecificPlayer(0) ~= nil
-end
-
 local function resolveUIClass()
     if type(CheatMenuUI) == "table" then
         return CheatMenuUI
@@ -97,14 +87,14 @@ local function safeInvoke(context, fn, ...)
 end
 
 function CheatMenuMain.canUse()
-    return isSingleplayer()
+    return CheatMenuSession.isSingleplayerSession()
 end
 
 function CheatMenuMain.ensureMenu()
     if CheatMenuMain.menu then
         return CheatMenuMain.menu
     end
-    if not playerReady() then
+    if not CheatMenuSession.isPlayerReady() then
         return nil
     end
     local uiClass = resolveUIClass()
@@ -152,7 +142,7 @@ function CheatMenuMain.onKeyPressed(key)
         CheatMenuMain:notifyBlocked()
         return
     end
-    if not playerReady() then
+    if not CheatMenuSession.isPlayerReady() then
         return
     end
     CheatMenuMain.toggleMenu()
@@ -163,7 +153,7 @@ function CheatMenuMain.onGameStart()
         CheatMenuMain.hideMenu()
         return
     end
-    if playerReady() then
+    if CheatMenuSession.isPlayerReady() then
         CheatMenuMain.ensureMenu()
     end
 end
@@ -183,7 +173,7 @@ function CheatMenuMain:notifyBlocked()
     if self.warned then
         return
     end
-    print("[CheatMenu] Disabled in multiplayer sessions")
+    print("[CheatMenu] Disabled in multiplayer sessions; singleplayer only.")
     self.warned = true
 end
 

@@ -151,8 +151,7 @@ return function(CheatMenuUI, deps)
 		local enabled = option and option.data and true or false
 		self:updateUtilsConfig("godMode", enabled)
 		CheatMenuUtils.setGodMode(enabled)
-		local messageKey = enabled and "UI_ZedToolbox_StatusGodModeOn" or "UI_ZedToolbox_StatusGodModeOff"
-		self:setStatus(true, CheatMenuText.get(messageKey, enabled and "God Mode enabled." or "God Mode disabled."))
+		self:statusToggle(enabled, "UI_ZedToolbox_StatusGodModeOn", "UI_ZedToolbox_StatusGodModeOff", "God Mode enabled.", "God Mode disabled.")
 		self:syncUtilsUI()
 	end
 
@@ -164,8 +163,7 @@ return function(CheatMenuUI, deps)
 		local enabled = option and option.data and true or false
 		self:updateUtilsConfig("hitKill", enabled)
 		CheatMenuUtils.setHitKill(enabled)
-		local messageKey = enabled and "UI_ZedToolbox_StatusHitKillOn" or "UI_ZedToolbox_StatusHitKillOff"
-		self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Hit Kill enabled." or "Hit Kill disabled."))
+		self:statusToggle(enabled, "UI_ZedToolbox_StatusHitKillOn", "UI_ZedToolbox_StatusHitKillOff", "Hit Kill enabled.", "Hit Kill disabled.")
 		self:syncUtilsUI()
 	end
 
@@ -177,8 +175,7 @@ return function(CheatMenuUI, deps)
 		local enabled = option and option.data and true or false
 		self:updateUtilsConfig("infiniteStamina", enabled)
 		CheatMenuUtils.setInfiniteStamina(enabled)
-		local messageKey = enabled and "UI_ZedToolbox_StatusInfiniteStaminaOn" or "UI_ZedToolbox_StatusInfiniteStaminaOff"
-		self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Infinite stamina enabled." or "Infinite stamina disabled."))
+		self:statusToggle(enabled, "UI_ZedToolbox_StatusInfiniteStaminaOn", "UI_ZedToolbox_StatusInfiniteStaminaOff", "Infinite stamina enabled.", "Infinite stamina disabled.")
 		self:syncUtilsUI()
 	end
 
@@ -190,8 +187,7 @@ return function(CheatMenuUI, deps)
 		local enabled = option and option.data and true or false
 		self:updateUtilsConfig("instantBuild", enabled)
 		CheatMenuUtils.setInstantBuild(enabled)
-		local messageKey = enabled and "UI_ZedToolbox_StatusInstantBuildOn" or "UI_ZedToolbox_StatusInstantBuildOff"
-		self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Instant build enabled." or "Instant build disabled."))
+		self:statusToggle(enabled, "UI_ZedToolbox_StatusInstantBuildOn", "UI_ZedToolbox_StatusInstantBuildOff", "Instant build enabled.", "Instant build disabled.")
 		self:syncUtilsUI()
 	end
 
@@ -203,8 +199,7 @@ return function(CheatMenuUI, deps)
 		local enabled = option and option.data and true or false
 		self:updateUtilsConfig("noNegativeEffects", enabled)
 		CheatMenuUtils.setNoNegativeEffects(enabled)
-		local messageKey = enabled and "UI_ZedToolbox_StatusNoNegativeEffectsOn" or "UI_ZedToolbox_StatusNoNegativeEffectsOff"
-		self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Negative effects cleared automatically." or "Negative effect protection disabled."))
+		self:statusToggle(enabled, "UI_ZedToolbox_StatusNoNegativeEffectsOn", "UI_ZedToolbox_StatusNoNegativeEffectsOff", "Negative effects cleared automatically.", "Negative effect protection disabled.")
 		self:syncUtilsUI()
 	end
 
@@ -216,8 +211,7 @@ return function(CheatMenuUI, deps)
 		local enabled = option and option.data and true or false
 		self:updateUtilsConfig("noHungerThirst", enabled)
 		CheatMenuUtils.setNoHungerThirst(enabled)
-		local messageKey = enabled and "UI_ZedToolbox_StatusNoHungerThirstOn" or "UI_ZedToolbox_StatusNoHungerThirstOff"
-		self:setStatus(true, CheatMenuText.get(messageKey, enabled and "Hunger and thirst disabled." or "Hunger and thirst restored to normal."))
+		self:statusToggle(enabled, "UI_ZedToolbox_StatusNoHungerThirstOn", "UI_ZedToolbox_StatusNoHungerThirstOff", "Hunger and thirst disabled.", "Hunger and thirst restored to normal.")
 		self:syncUtilsUI()
 	end
 
@@ -229,16 +223,16 @@ return function(CheatMenuUI, deps)
 		local multiplier = clamp(option and option.data or 1, 0.5, 5)
 		self:updateUtilsConfig("speedMultiplier", multiplier)
 		CheatMenuUtils.setSpeedMultiplier(multiplier)
-		self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusSpeedApplied", "Speed set to %1x.", multiplier))
+		self:statusSpeedApplied(multiplier)
 		self:syncUtilsUI()
 	end
 
 	function CheatMenuUI:onHealClicked()
 		local success = CheatMenuUtils.healPlayer()
 		if success then
-			self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusHealed", "Player fully healed."))
+			self:statusHealed()
 		else
-			self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_StatusHealFailed", "Player not ready."))
+			self:statusPlayerNotReady()
 		end
 	end
 
@@ -246,10 +240,6 @@ return function(CheatMenuUI, deps)
 		local utilsState = CheatMenuUtils.getState() or {}
 		local finalRadius = utilsState.clearRadius or 15
 		local cleared = CheatMenuUtils.clearZombies(finalRadius)
-		if cleared > 0 then
-			self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusClearZombies", "%1 zombies removed within %2 tiles.", cleared, finalRadius))
-		else
-			self:setStatus(true, CheatMenuText.get("UI_ZedToolbox_StatusClearZombiesNone", "No zombies found within %1 tiles.", finalRadius))
-		end
+		self:statusClearZombies(cleared, finalRadius)
 	end
 end
