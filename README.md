@@ -2,10 +2,10 @@
 
 # 🧰 Zed Toolbox
 
-**The Ultimate Singleplayer Cheat Menu for Project Zomboid**
-_Fast item spawning • Smart categorization • Intuitive interface • Multi-language support_
+**The Ultimate Singleplayer Sandbox Toolkit for Project Zomboid**
+_Spawn items fast • Control the world • Test builds safely • Clean, powerful interface_
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/CodeMaster-java/ZedToolbox/releases)
+[![Version](https://img.shields.io/badge/version-2.1.0-blue.svg)](https://github.com/CodeMaster-java/ZedToolbox/releases)
 [![Platform](https://img.shields.io/badge/platform-Project%20Zomboid-green.svg)](https://store.steampowered.com/app/108600/Project_Zomboid/)
 [![Build](https://img.shields.io/badge/build-41+-orange.svg)](https://projectzomboid.com/blog/)
 [![License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE.md)
@@ -47,26 +47,26 @@ _Fast item spawning • Smart categorization • Intuitive interface • Multi-l
 
 ## 🎯 Overview
 
-**Zed Toolbox** is a comprehensive cheat menu designed specifically for Project Zomboid singleplayer sessions. Built with performance and user experience in mind, it provides instant access to all game items while maintaining a clean, intuitive interface.
+**Zed Toolbox** is a fast, polished sandbox toolkit for Project Zomboid singleplayer. It gives you direct control over items, player setup, zombies, traits, moodles, and world settings from one streamlined interface built for testing, experimentation, and sandbox freedom.
 
 ### 🎮 At a Glance
 
-| **Feature**            | **Details**                                      |
-| :--------------------- | :----------------------------------------------- |
-| **🎯 Target Audience** | Sandbox players, modders, content creators       |
-| **🕹️ Game Mode**       | Singleplayer only (auto-disables in multiplayer) |
-| **⌨️ Default Hotkey**  | `Insert` (fully customizable)                    |
-| **🌐 Languages**       | 6+ languages with easy expansion                 |
-| **📦 Game Version**    | Project Zomboid Build 41+                        |
-| **🔧 Dependencies**    | None - plug & play                               |
+| **Feature**            | **Details**                                         |
+| :--------------------- | :-------------------------------------------------- |
+| **🎯 Target Audience** | Sandbox players, testers, modders, content creators |
+| **🕹️ Game Mode**       | Singleplayer only (auto-disables in multiplayer)    |
+| **⌨️ Default Hotkey**  | `Insert` (fully customizable)                       |
+| **🌐 Languages**       | 6+ languages with easy expansion                    |
+| **📦 Game Version**    | Project Zomboid Build 41+                           |
+| **🔧 Dependencies**    | None - plug & play                                  |
 
 ### 🎯 Perfect For
 
-- **🏗️ Base builders** needing quick material access
-- **🧪 Mod developers** testing new content
-- **📹 Content creators** setting up scenarios
-- **🎮 Casual players** enjoying sandbox mode
-- **🔍 Bug testers** reproducing issues
+- **🏗️ Base builders** who want fast access to materials and setups
+- **🧪 Mod developers** testing systems, balance, and new content
+- **📹 Content creators** building scenarios on demand
+- **🎮 Sandbox players** who want more control and flexibility
+- **🔍 Bug testers** reproducing situations quickly and reliably
 
 > ⚠️ **Multiplayer Protection**: Automatically detects and disables in multiplayer environments to maintain fair play.
 
