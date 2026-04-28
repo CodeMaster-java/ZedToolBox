@@ -1,4 +1,5 @@
 local CheatMenuLogger = require "CheatMenuLogger"
+local CheatMenuSession = require "CheatMenuSession"
 
 local CheatMenuUtils = {}
 
@@ -38,10 +39,7 @@ local function clamp(value, minValue, maxValue)
 end
 
 local function getPlayer()
-    if not getSpecificPlayer then
-        return nil
-    end
-    return getSpecificPlayer(0)
+    return CheatMenuSession.getPlayerObject()
 end
 
 local function refreshStamina(player, enabled)

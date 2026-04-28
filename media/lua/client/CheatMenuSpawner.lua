@@ -1,5 +1,6 @@
 local CheatMenuItems = require "CheatMenuItems"
 local CheatMenuText = require "CheatMenuText"
+local CheatMenuSession = require "CheatMenuSession"
 
 local CheatMenuSpawner = {}
 
@@ -17,7 +18,7 @@ local function clampQuantity(value)
 end
 
 local function getPlayerObject()
-    return getSpecificPlayer(0) or getPlayer()
+    return CheatMenuSession.getPlayerObject()
 end
 
 local function spawnOnGround(baseId, quantity, player)
@@ -55,7 +56,7 @@ function CheatMenuSpawner.spawn(baseId, quantity, target)
     end
     local player = getPlayerObject()
     if not player then
-        return false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready")
+        return false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready.")
     end
     local qty = clampQuantity(quantity)
     if target == "ground" then

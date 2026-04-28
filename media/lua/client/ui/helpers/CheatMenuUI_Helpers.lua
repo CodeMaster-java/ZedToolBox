@@ -1,4 +1,5 @@
 local CheatMenuText = require "CheatMenuText"
+local CheatMenuSession = require "CheatMenuSession"
 
 local helpers = {}
 
@@ -198,10 +199,7 @@ local DEFAULT_SKILL_ENTRIES = {
 }
 
 function helpers.getPlayerCharacter()
-    if not getSpecificPlayer then
-        return nil
-    end
-    return getSpecificPlayer(0)
+    return CheatMenuSession.getPlayerObject()
 end
 
 function helpers.buildSkillDefinitions()

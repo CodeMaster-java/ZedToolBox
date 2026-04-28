@@ -452,12 +452,12 @@ return function(CheatMenuUI, deps)
     function CheatMenuUI:onTraitAdd()
         local entry = self:getSelectedTraitEntry()
         if not entry or not entry.definition then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Traits_Select", "Select a trait first."))
+            self:statusSelectTrait()
             return
         end
         local player = getPlayerCharacter()
         if not player then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+            self:statusPlayerNotReady()
             return
         end
         local success = addTraitToPlayer(player, entry.definition.id)
@@ -469,12 +469,12 @@ return function(CheatMenuUI, deps)
     function CheatMenuUI:onTraitRemove()
         local entry = self:getSelectedTraitEntry()
         if not entry or not entry.definition then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_Traits_Select", "Select a trait first."))
+            self:statusSelectTrait()
             return
         end
         local player = getPlayerCharacter()
         if not player then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+            self:statusPlayerNotReady()
             return
         end
         local success = removeTraitFromPlayer(player, entry.definition.id)
@@ -486,7 +486,7 @@ return function(CheatMenuUI, deps)
     function CheatMenuUI:onTraitsReset()
         local player = getPlayerCharacter()
         if not player then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+            self:statusPlayerNotReady()
             return
         end
         local success = resetAllTraits(player)
@@ -498,7 +498,7 @@ return function(CheatMenuUI, deps)
     local function addTraitsByCost(self, costSign)
         local player = getPlayerCharacter()
         if not player then
-            self:setStatus(false, CheatMenuText.get("UI_ZedToolbox_ErrorPlayer", "Player not ready"))
+            self:statusPlayerNotReady()
             return
         end
         self:refreshTraitDefinitions()
