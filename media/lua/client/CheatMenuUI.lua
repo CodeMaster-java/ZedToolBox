@@ -23,43 +23,51 @@ local Helpers = require "ui/helpers/CheatMenuUI_Helpers"
 
 local CheatMenuUI = ISPanel:derive("CheatMenuUI")
 
-local PANEL_WIDTH = 1100
+local PANEL_WIDTH  = 1100
 local PANEL_HEIGHT = 600
-local PADDING = 16
-local COLUMN_GAP = 14
-local LIST_TOP = 86
-local TAB_HEIGHT = 28
-local TAB_BUTTON_WIDTH = 160
-local TAB_GAP = 10
-local BOTTOM_HEIGHT = 190
-local LEFT_WIDTH = 180
-local CENTER_WIDTH = 440
-local RIGHT_WIDTH = PANEL_WIDTH - (PADDING * 2) - LEFT_WIDTH - CENTER_WIDTH - (COLUMN_GAP * 2)
-local MODDATA_KEY = "ZedToolbox"
-local BUTTON_HEIGHT = 22
-local BUTTON_GAP = 4
-local BUTTON_ROW_GAP = 12
-local SECTION_GAP = 16
-local PRESET_NAME_HEIGHT = 24
-local PRESET_NAME_GAP = 6
-local SPAWN_BUTTON_WIDTH = 220
-local MIN_FAVORITES_HEIGHT = 140
-local MIN_PRESETS_HEIGHT = 120
-local SECTION_BG_ALPHA = 0.22
-local SECTION_BORDER_ALPHA = 0.38
-local BOTTOM_PANEL_PADDING = 14
-local PRIMARY_BUTTON_HEIGHT = 34
-local REMOVE_BUTTON_EXTRA_GAP = 6
-local SEARCH_LABEL_WIDTH = 60
-local SEARCH_FIELD_WIDTH = 280
-local PRESET_HEADER_GAP = 10
-local CREDIT_TEXT = "by CodeMaster"
+local PADDING      = 20
+local COLUMN_GAP   = 14
+local LIST_TOP     = 86
+local TAB_HEIGHT        = 28
+local TAB_BTN_GAP       = 4
+local TAB_GAP           = 10
+local BOTTOM_HEIGHT     = 190
+local LEFT_WIDTH    = 180
+local CENTER_WIDTH  = 440
+local RIGHT_WIDTH   = PANEL_WIDTH - (PADDING * 2) - LEFT_WIDTH - CENTER_WIDTH - (COLUMN_GAP * 2)
+local MODDATA_KEY   = "ZedToolbox"
 
-CheatMenuUI.Width = PANEL_WIDTH
+local BUTTON_HEIGHT         = 28
+local BUTTON_GAP            = 8
+local BUTTON_ROW_GAP        = 16
+local SECTION_GAP           = 22
+local PRESET_NAME_HEIGHT    = 26
+local PRESET_NAME_GAP       = 8
+local SPAWN_BUTTON_WIDTH    = 220
+local MIN_FAVORITES_HEIGHT  = 140
+local MIN_PRESETS_HEIGHT    = 120
+local BOTTOM_PANEL_PADDING  = 18
+local PRIMARY_BUTTON_HEIGHT = 38
+local REMOVE_BUTTON_EXTRA_GAP = 8
+local SEARCH_LABEL_WIDTH    = 60
+local SEARCH_FIELD_WIDTH    = 280
+local PRESET_HEADER_GAP     = 12
+local CREDIT_TEXT           = "by CodeMaster"
+
+local SECTION_BG_ALPHA     = 0.28
+local SECTION_BORDER_ALPHA = 0.55
+
+local ACCENT         = { r = 0.78, g = 0.66, b = 0.29 }
+local LABEL_COLOR    = { r = 0.85, g = 0.85, b = 0.85 }
+local LABEL_DIM_COLOR = { r = 0.58, g = 0.58, b = 0.58 }
+local SELECTION_COLOR = { r = 0.22, g = 0.42, b = 0.18 }
+
+CheatMenuUI.Width  = PANEL_WIDTH
 CheatMenuUI.Height = PANEL_HEIGHT
 
-local STATUS_SUCCESS = { r = 0.55, g = 0.85, b = 0.55 }
-local STATUS_ERROR = { r = 0.93, g = 0.4, b = 0.4 }
+local STATUS_SUCCESS = { r = 0.45, g = 0.82, b = 0.45 }
+local STATUS_WARNING = { r = 0.93, g = 0.75, b = 0.25 }
+local STATUS_ERROR   = { r = 0.93, g = 0.38, b = 0.38 }
 local clamp = Helpers.clamp
 local getHotkeyOptions = Helpers.getHotkeyOptions
 local getCheatMenuMain = Helpers.getCheatMenuMain
@@ -78,37 +86,42 @@ local getPlayerSkillLevel = Helpers.getPlayerSkillLevel
 local applySkillLevel = Helpers.applySkillLevel
 
 local LIFECYCLE_CONSTANTS = {
-    PADDING = PADDING,
-    COLUMN_GAP = COLUMN_GAP,
-    LIST_TOP = LIST_TOP,
-    TAB_HEIGHT = TAB_HEIGHT,
-    TAB_BUTTON_WIDTH = TAB_BUTTON_WIDTH,
-    TAB_GAP = TAB_GAP,
-    BOTTOM_HEIGHT = BOTTOM_HEIGHT,
-    LEFT_WIDTH = LEFT_WIDTH,
-    CENTER_WIDTH = CENTER_WIDTH,
-    RIGHT_WIDTH = RIGHT_WIDTH,
-    MODDATA_KEY = MODDATA_KEY,
-    BUTTON_HEIGHT = BUTTON_HEIGHT,
-    BUTTON_GAP = BUTTON_GAP,
-    BUTTON_ROW_GAP = BUTTON_ROW_GAP,
-    SECTION_GAP = SECTION_GAP,
-    PRESET_NAME_HEIGHT = PRESET_NAME_HEIGHT,
-    PRESET_NAME_GAP = PRESET_NAME_GAP,
-    SPAWN_BUTTON_WIDTH = SPAWN_BUTTON_WIDTH,
-    MIN_FAVORITES_HEIGHT = MIN_FAVORITES_HEIGHT,
-    MIN_PRESETS_HEIGHT = MIN_PRESETS_HEIGHT,
-    SECTION_BG_ALPHA = SECTION_BG_ALPHA,
-    SECTION_BORDER_ALPHA = SECTION_BORDER_ALPHA,
-    BOTTOM_PANEL_PADDING = BOTTOM_PANEL_PADDING,
-    PRIMARY_BUTTON_HEIGHT = PRIMARY_BUTTON_HEIGHT,
+    PADDING             = PADDING,
+    COLUMN_GAP          = COLUMN_GAP,
+    LIST_TOP            = LIST_TOP,
+    TAB_HEIGHT          = TAB_HEIGHT,
+    TAB_BTN_GAP         = TAB_BTN_GAP,
+    TAB_GAP             = TAB_GAP,
+    BOTTOM_HEIGHT       = BOTTOM_HEIGHT,
+    LEFT_WIDTH          = LEFT_WIDTH,
+    CENTER_WIDTH        = CENTER_WIDTH,
+    RIGHT_WIDTH         = RIGHT_WIDTH,
+    MODDATA_KEY         = MODDATA_KEY,
+    BUTTON_HEIGHT       = BUTTON_HEIGHT,
+    BUTTON_GAP          = BUTTON_GAP,
+    BUTTON_ROW_GAP      = BUTTON_ROW_GAP,
+    SECTION_GAP         = SECTION_GAP,
+    PRESET_NAME_HEIGHT  = PRESET_NAME_HEIGHT,
+    PRESET_NAME_GAP     = PRESET_NAME_GAP,
+    SPAWN_BUTTON_WIDTH  = SPAWN_BUTTON_WIDTH,
+    MIN_FAVORITES_HEIGHT    = MIN_FAVORITES_HEIGHT,
+    MIN_PRESETS_HEIGHT      = MIN_PRESETS_HEIGHT,
+    SECTION_BG_ALPHA        = SECTION_BG_ALPHA,
+    SECTION_BORDER_ALPHA    = SECTION_BORDER_ALPHA,
+    BOTTOM_PANEL_PADDING    = BOTTOM_PANEL_PADDING,
+    PRIMARY_BUTTON_HEIGHT   = PRIMARY_BUTTON_HEIGHT,
     REMOVE_BUTTON_EXTRA_GAP = REMOVE_BUTTON_EXTRA_GAP,
-    SEARCH_LABEL_WIDTH = SEARCH_LABEL_WIDTH,
-    SEARCH_FIELD_WIDTH = SEARCH_FIELD_WIDTH,
-    PRESET_HEADER_GAP = PRESET_HEADER_GAP,
-    CREDIT_TEXT = CREDIT_TEXT,
-    STATUS_SUCCESS = STATUS_SUCCESS,
-    STATUS_ERROR = STATUS_ERROR
+    SEARCH_LABEL_WIDTH  = SEARCH_LABEL_WIDTH,
+    SEARCH_FIELD_WIDTH  = SEARCH_FIELD_WIDTH,
+    PRESET_HEADER_GAP   = PRESET_HEADER_GAP,
+    CREDIT_TEXT         = CREDIT_TEXT,
+    ACCENT              = ACCENT,
+    LABEL_COLOR         = LABEL_COLOR,
+    LABEL_DIM_COLOR     = LABEL_DIM_COLOR,
+    SELECTION_COLOR     = SELECTION_COLOR,
+    STATUS_SUCCESS      = STATUS_SUCCESS,
+    STATUS_WARNING      = STATUS_WARNING,
+    STATUS_ERROR        = STATUS_ERROR,
 }
 
 function CheatMenuUI:new(x, y)
@@ -117,7 +130,7 @@ function CheatMenuUI:new(x, y)
     self.__index = self
     o.moveWithMouse = true
     o:noBackground()
-    o.status = { message = "", color = STATUS_SUCCESS }
+    o.status = { message = "", color = LABEL_DIM_COLOR }
     o.catalog = {}
     o.selectedCategory = nil
     o.favorites = {}
@@ -125,7 +138,6 @@ function CheatMenuUI:new(x, y)
     o.profiles = {}
     o.config = {}
     o.activeTab = "items"
-    o.tabSelector = nil
     o.tabButtons = {}
     o.tabDefinitions = {
         { id = "items", labelKey = "UI_ZedToolbox_TabItems", fallback = "Item Spawns" },
@@ -154,48 +166,25 @@ function CheatMenuUI:addToTab(tabId, control)
     table.insert(self.tabControls[tabId], control)
 end
 
-function CheatMenuUI:populateTabSelector(selectedId)
-    if not self.tabSelector then
-        return
-    end
-    local target = selectedId or self.activeTab or "items"
-    local fallbackIndex = 1
-    if self.tabSelector.clear then
-        self.tabSelector:clear()
-    end
-    for index, definition in ipairs(self.tabDefinitions or {}) do
-        local label = CheatMenuText.get(definition.labelKey, definition.fallback)
-        if self.tabSelector.addOptionWithData then
-            self.tabSelector:addOptionWithData(label, definition.id)
+function CheatMenuUI:updateTabButtonStates()
+    for _, btn in ipairs(self.tabButtons) do
+        local isActive = btn.internal == self.activeTab
+        if isActive then
+            btn.backgroundColor = { r = 0.20, g = 0.16, b = 0.05, a = 0.95 }
+            btn.borderColor     = { r = ACCENT.r, g = ACCENT.g, b = ACCENT.b, a = 1 }
         else
-            self.tabSelector:addOption(label)
-        end
-        if definition.id == target then
-            fallbackIndex = index
+            btn.backgroundColor = { r = 0.10, g = 0.10, b = 0.11, a = 0.88 }
+            btn.borderColor     = { r = 0.28, g = 0.22, b = 0.08, a = 0.70 }
         end
     end
-    self.isUpdatingTabSelector = true
-    self.tabSelector.selected = fallbackIndex
-    self.isUpdatingTabSelector = false
 end
 
-function CheatMenuUI:onTabSelectionChanged(combo)
-    if self.isUpdatingTabSelector then
+function CheatMenuUI:onTabButtonClicked(button)
+    if not button or not button.internal then
         return
     end
-    local source = combo or self.tabSelector
-    if not source or not source.options then
-        return
-    end
-    local index = source.selected or 1
-    local option = source.options[index]
-    local targetId = option and option.data
-    if not targetId and self.tabDefinitions then
-        local definition = self.tabDefinitions[index]
-        targetId = definition and definition.id or targetId
-    end
-    if targetId and targetId ~= self.activeTab then
-        self:setActiveTab(targetId)
+    if button.internal ~= self.activeTab then
+        self:setActiveTab(button.internal)
     end
 end
 

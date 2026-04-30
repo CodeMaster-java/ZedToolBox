@@ -421,7 +421,7 @@ return function(CheatMenuUI, deps)
         local groupGap = SECTION_GAP + 8
         local labelOffset = 22
         local entryHeight = 24
-        local sectionTop = contentTop - labelOffset - 6
+        local sectionTop = contentTop - 50
 
         local rowY = contentTop
         local entryWidth = 70

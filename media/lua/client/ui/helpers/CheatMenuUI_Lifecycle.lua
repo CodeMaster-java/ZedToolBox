@@ -13,7 +13,7 @@ return function(CheatMenuUI, deps)
     local COLUMN_GAP = constants.COLUMN_GAP
     local LIST_TOP = constants.LIST_TOP
     local TAB_HEIGHT = constants.TAB_HEIGHT
-    local TAB_BUTTON_WIDTH = constants.TAB_BUTTON_WIDTH
+    local TAB_BTN_GAP = constants.TAB_BTN_GAP
     local TAB_GAP = constants.TAB_GAP
     local BOTTOM_HEIGHT = constants.BOTTOM_HEIGHT
     local LEFT_WIDTH = constants.LEFT_WIDTH
@@ -38,10 +38,15 @@ return function(CheatMenuUI, deps)
     local SEARCH_FIELD_WIDTH = constants.SEARCH_FIELD_WIDTH
     local PRESET_HEADER_GAP = constants.PRESET_HEADER_GAP
     local CREDIT_TEXT = constants.CREDIT_TEXT
-    local STATUS_SUCCESS = constants.STATUS_SUCCESS
-    local STATUS_ERROR = constants.STATUS_ERROR
+    local STATUS_SUCCESS  = constants.STATUS_SUCCESS
+    local STATUS_WARNING  = constants.STATUS_WARNING
+    local STATUS_ERROR    = constants.STATUS_ERROR
+    local ACCENT          = constants.ACCENT
+    local LABEL_COLOR     = constants.LABEL_COLOR
+    local LABEL_DIM_COLOR = constants.LABEL_DIM_COLOR
+    local SELECTION_COLOR = constants.SELECTION_COLOR
     local STATUS_BAR_HEIGHT = 28
-    local STATUS_BAR_Y = 18
+    local STATUS_BAR_Y = 0
 
     local function ellipsize(text, maxChars)
         text = tostring(text or "")
@@ -85,22 +90,31 @@ return function(CheatMenuUI, deps)
         self:addChild(self.closeBtn)
 
         local tabX = PADDING
-        local tabY = PADDING
+        local tabY = 40
 
-        self.tabSelector = ISComboBox:new(tabX, tabY, TAB_BUTTON_WIDTH, TAB_HEIGHT, self, nil)
-        self.tabSelector:initialise()
-        self.tabSelector:instantiate()
-        self.tabSelector.onChange = function()
-            self:onTabSelectionChanged()
+        local tabCount   = #self.tabDefinitions
+        local tabAreaEnd = self.width - PADDING - 44
+        local tabBtnW    = math.floor((tabAreaEnd - tabX - (tabCount - 1) * TAB_BTN_GAP) / tabCount)
+
+        for _, definition in ipairs(self.tabDefinitions) do
+            local label = CheatMenuText.get(definition.labelKey, definition.fallback)
+            local btn = ISButton:new(tabX, tabY, tabBtnW, TAB_HEIGHT, label, self, CheatMenuUI.onTabButtonClicked)
+            btn.internal        = definition.id
+            btn.backgroundColor = { r = 0.10, g = 0.10, b = 0.11, a = 0.88 }
+            btn.borderColor     = { r = 0.28, g = 0.22, b = 0.08, a = 0.70 }
+            btn:initialise()
+            btn:instantiate()
+            self:addChild(btn)
+            table.insert(self.tabButtons, btn)
+            tabX = tabX + tabBtnW + TAB_BTN_GAP
         end
-        self:addChild(self.tabSelector)
-        self:populateTabSelector(self.activeTab)
+        self:updateTabButtonStates()
 
         local searchLabelX = PADDING
         local searchFieldY = tabY + TAB_HEIGHT + TAB_GAP
         local searchFieldX = searchLabelX + SEARCH_LABEL_WIDTH + 8
         local searchWidth = math.min(SEARCH_FIELD_WIDTH, self.width - searchFieldX - PADDING)
-        self.searchBox = ISTextEntryBox:new("", searchFieldX, searchFieldY, searchWidth, 22)
+        self.searchBox = ISTextEntryBox:new("", searchFieldX, searchFieldY, searchWidth, 26)
         self.searchBox:initialise()
         self.searchBox:instantiate()
         self.searchBox.onTextChange = function()
@@ -116,15 +130,17 @@ return function(CheatMenuUI, deps)
         self.categoryList = ISScrollingListBox:new(PADDING, listTop, LEFT_WIDTH, listHeight)
         self.categoryList:initialise()
         self.categoryList:instantiate()
-        self.categoryList.itemheight = 24
+        self.categoryList.itemheight = 28
         self.categoryList.font = UIFont.Small
         self.categoryList.doDrawItem = function(list, y, item)
             local isSelected = list.selected == item.index
             if isSelected then
-                list:drawRect(0, y, list.width, item.height, 0.25, 0.2, 0.6, 0.9)
+                list:drawRect(0, y, list.width, item.height, 0.55, SELECTION_COLOR.r, SELECTION_COLOR.g, SELECTION_COLOR.b)
             end
-            local tint = isSelected and 1 or 0.9
-            list:drawText(item.text, 10, y + 5, tint, tint, tint, 1, UIFont.Small)
+            local r = isSelected and 1 or LABEL_COLOR.r
+            local g = isSelected and 1 or LABEL_COLOR.g
+            local b = isSelected and 1 or LABEL_COLOR.b
+            list:drawText(item.text, 10, y + 5, r, g, b, 1, UIFont.Small)
             return y + item.height
         end
         self.categoryList.onMouseDown = function(list, x, y)
@@ -137,15 +153,17 @@ return function(CheatMenuUI, deps)
         self.itemsList = ISScrollingListBox:new(PADDING + LEFT_WIDTH + COLUMN_GAP, listTop, CENTER_WIDTH, listHeight)
         self.itemsList:initialise()
         self.itemsList:instantiate()
-        self.itemsList.itemheight = 26
+        self.itemsList.itemheight = 30
         self.itemsList.font = UIFont.Small
         self.itemsList.doDrawItem = function(list, y, item)
             local isSelected = list.selected == item.index
             if isSelected then
-                list:drawRect(0, y, list.width, item.height, 0.25, 0.2, 0.6, 0.9)
+                list:drawRect(0, y, list.width, item.height, 0.55, SELECTION_COLOR.r, SELECTION_COLOR.g, SELECTION_COLOR.b)
             end
-            local tint = isSelected and 1 or 0.9
-            list:drawText(item.text, 10, y + 5, tint, tint, tint, 1, UIFont.Small)
+            local r = isSelected and 1 or LABEL_COLOR.r
+            local g = isSelected and 1 or LABEL_COLOR.g
+            local b = isSelected and 1 or LABEL_COLOR.b
+            list:drawText(item.text, 10, y + 5, r, g, b, 1, UIFont.Small)
             return y + item.height
         end
         self.itemsList.onMouseDown = function(list, x, y)
@@ -164,7 +182,7 @@ return function(CheatMenuUI, deps)
         local presetsWidth = RIGHT_WIDTH - favoritesWidth - dualColumnGap
         local favoriteButtonRowWidth = math.floor((favoritesWidth - BUTTON_GAP) / 2)
         local presetButtonRowWidth = math.floor((presetsWidth - BUTTON_GAP) / 2)
-        local labelOffset = 18
+        local labelOffset = 22
 
         local favoritesX = rightX
         local presetsX = favoritesX + favoritesWidth + dualColumnGap
@@ -177,7 +195,7 @@ return function(CheatMenuUI, deps)
             self:onFavoriteSelected()
         end
         self:addChild(self.favoritesCombo)
-        self.favoritesLabelPos = { x = favoritesX, y = self.favoritesCombo.y - 18 }
+        self.favoritesLabelPos = { x = favoritesX, y = self.favoritesCombo.y - 22 }
         self:addToTab("items", self.favoritesCombo)
 
         local favBtnY = self.favoritesCombo.y + self.favoritesCombo.height + BUTTON_ROW_GAP
@@ -320,13 +338,13 @@ return function(CheatMenuUI, deps)
             h = bottomSectionBottom - bottomTop
         }
 
-        local utilsSectionTop = listTop - 30
+        local utilsSectionTop = listTop - 50
         local utilsComboWidth = 240
-        local utilsSpacing = 48
+        local utilsSpacing    = 48
         local utilsX = PADDING
 
         local godModeY = listTop
-        self.utilsLabelPositions.godMode = { x = utilsX, y = godModeY - 18 }
+        self.utilsLabelPositions.godMode = { x = utilsX, y = godModeY - 22 }
         self.godModeCombo = ISComboBox:new(utilsX, godModeY, utilsComboWidth, 24, self, nil)
         self.godModeCombo:initialise()
         self.godModeCombo:instantiate()
@@ -337,7 +355,7 @@ return function(CheatMenuUI, deps)
         self:addToTab("utils", self.godModeCombo)
 
         local hitKillY = godModeY + utilsSpacing
-        self.utilsLabelPositions.hitKill = { x = utilsX, y = hitKillY - 18 }
+        self.utilsLabelPositions.hitKill = { x = utilsX, y = hitKillY - 22 }
         self.hitKillCombo = ISComboBox:new(utilsX, hitKillY, utilsComboWidth, 24, self, nil)
         self.hitKillCombo:initialise()
         self.hitKillCombo:instantiate()
@@ -348,7 +366,7 @@ return function(CheatMenuUI, deps)
         self:addToTab("utils", self.hitKillCombo)
 
         local infiniteY = hitKillY + utilsSpacing
-        self.utilsLabelPositions.infiniteStamina = { x = utilsX, y = infiniteY - 18 }
+        self.utilsLabelPositions.infiniteStamina = { x = utilsX, y = infiniteY - 22 }
         self.infiniteStaminaCombo = ISComboBox:new(utilsX, infiniteY, utilsComboWidth, 24, self, nil)
         self.infiniteStaminaCombo:initialise()
         self.infiniteStaminaCombo:instantiate()
@@ -359,7 +377,7 @@ return function(CheatMenuUI, deps)
         self:addToTab("utils", self.infiniteStaminaCombo)
 
         local instantBuildY = infiniteY + utilsSpacing
-        self.utilsLabelPositions.instantBuild = { x = utilsX, y = instantBuildY - 18 }
+        self.utilsLabelPositions.instantBuild = { x = utilsX, y = instantBuildY - 22 }
         self.instantBuildCombo = ISComboBox:new(utilsX, instantBuildY, utilsComboWidth, 24, self, nil)
         self.instantBuildCombo:initialise()
         self.instantBuildCombo:instantiate()
@@ -370,7 +388,7 @@ return function(CheatMenuUI, deps)
         self:addToTab("utils", self.instantBuildCombo)
 
         local noNegativeY = instantBuildY + utilsSpacing
-        self.utilsLabelPositions.noNegativeEffects = { x = utilsX, y = noNegativeY - 18 }
+        self.utilsLabelPositions.noNegativeEffects = { x = utilsX, y = noNegativeY - 22 }
         self.noNegativeEffectsCombo = ISComboBox:new(utilsX, noNegativeY, utilsComboWidth, 24, self, nil)
         self.noNegativeEffectsCombo:initialise()
         self.noNegativeEffectsCombo:instantiate()
@@ -381,7 +399,7 @@ return function(CheatMenuUI, deps)
         self:addToTab("utils", self.noNegativeEffectsCombo)
 
         local noHungerY = noNegativeY + utilsSpacing
-        self.utilsLabelPositions.noHungerThirst = { x = utilsX, y = noHungerY - 18 }
+        self.utilsLabelPositions.noHungerThirst = { x = utilsX, y = noHungerY - 22 }
         self.noHungerThirstCombo = ISComboBox:new(utilsX, noHungerY, utilsComboWidth, 24, self, nil)
         self.noHungerThirstCombo:initialise()
         self.noHungerThirstCombo:instantiate()
@@ -392,7 +410,7 @@ return function(CheatMenuUI, deps)
         self:addToTab("utils", self.noHungerThirstCombo)
 
         local speedY = noHungerY + utilsSpacing
-        self.utilsLabelPositions.speed = { x = utilsX, y = speedY - 18 }
+        self.utilsLabelPositions.speed = { x = utilsX, y = speedY - 22 }
         self.speedCombo = ISComboBox:new(utilsX, speedY, utilsComboWidth, 24, self, nil)
         self.speedCombo:initialise()
         self.speedCombo:instantiate()
@@ -436,7 +454,7 @@ return function(CheatMenuUI, deps)
 
         local configContentTop = listTop
         local configComboWidth = 220
-        self.languageLabelPos = { x = PADDING, y = configContentTop - 18 }
+        self.languageLabelPos = { x = PADDING, y = configContentTop - 22 }
         self.languageCombo = ISComboBox:new(PADDING, configContentTop, configComboWidth, 24, self, nil)
         self.languageCombo:initialise()
         self.languageCombo:instantiate()
@@ -450,8 +468,8 @@ return function(CheatMenuUI, deps)
         self:addChild(self.applyLanguageBtn)
         self:addToTab("config", self.applyLanguageBtn)
 
-        local hotkeyY = configContentTop + 44
-        self.hotkeyLabelPos = { x = PADDING, y = hotkeyY - 18 }
+        local hotkeyY = configContentTop + 54
+        self.hotkeyLabelPos = { x = PADDING, y = hotkeyY - 22 }
         self.hotkeyCombo = ISComboBox:new(PADDING, hotkeyY, configComboWidth, 24, self, nil)
         self.hotkeyCombo:initialise()
         self.hotkeyCombo:instantiate()
@@ -470,8 +488,8 @@ return function(CheatMenuUI, deps)
         local skillsContentX = PADDING + skillsInnerPadding
         local skillsContentWidth = skillsSectionWidth - (skillsInnerPadding * 2)
         local skillComboWidth = math.min(320, skillsContentWidth)
-        local skillRowY = skillsSectionTop + 42
-        self.skillComboLabelPos = { x = skillsContentX, y = skillRowY - 18 }
+        local skillRowY = skillsSectionTop + 50
+        self.skillComboLabelPos = { x = skillsContentX, y = skillRowY - 22 }
         self.skillCombo = ISComboBox:new(skillsContentX, skillRowY, skillComboWidth, 24, self, nil)
         self.skillCombo:initialise()
         self.skillCombo:instantiate()
@@ -490,16 +508,16 @@ return function(CheatMenuUI, deps)
         if levelComboX == skillsContentX then
             levelRowY = skillRowY + 36
         end
-        self.skillLevelLabelPos = { x = levelComboX, y = levelRowY - 18 }
+        self.skillLevelLabelPos = { x = levelComboX, y = levelRowY - 22 }
         self.skillLevelCombo = ISComboBox:new(levelComboX, levelRowY, levelComboWidth, 24, self, nil)
         self.skillLevelCombo:initialise()
         self.skillLevelCombo:instantiate()
         self:addChild(self.skillLevelCombo)
         self:addToTab("skills", self.skillLevelCombo)
 
-        local infoY = math.max(skillRowY, levelRowY) + 32
+        local infoY = math.max(skillRowY, levelRowY) + 36
         self.skillCurrentLevelPos = { x = skillsContentX, y = infoY }
-        local buttonRowY = infoY + 24
+        local buttonRowY = infoY + 28
         local tripleWidth = math.floor((skillsContentWidth - (BUTTON_GAP * 2)) / 3)
         if tripleWidth < 140 then
             tripleWidth = 140
@@ -658,8 +676,8 @@ return function(CheatMenuUI, deps)
             end
         end
 
-        if self.tabSelector then
-            self:populateTabSelector(target)
+        if #self.tabButtons > 0 then
+            self:updateTabButtonStates()
         end
         if target == "skills" then
             self:syncSkillUI()
@@ -893,7 +911,15 @@ return function(CheatMenuUI, deps)
     end
 
     function CheatMenuUI:applyTranslations()
-        self:populateTabSelector(self.activeTab)
+        for _, btn in ipairs(self.tabButtons) do
+            for _, definition in ipairs(self.tabDefinitions) do
+                if definition.id == btn.internal then
+                    btn:setTitle(CheatMenuText.get(definition.labelKey, definition.fallback))
+                    break
+                end
+            end
+        end
+        self:updateTabButtonStates()
         if self.addFavoriteBtn then
             self.addFavoriteBtn:setTitle(CheatMenuText.get("UI_ZedToolbox_AddFavorite", "Add Favorite"))
         end
@@ -1224,16 +1250,27 @@ return function(CheatMenuUI, deps)
 
     function CheatMenuUI:prerender()
         ISPanel.prerender(self)
-        self:drawRect(0, 0, self.width, self.height, 0.92, 0, 0, 0)
-        self:drawRectBorder(0, 0, self.width, self.height, 0.9, 0.8, 0.8, 0.8)
+
+        self:drawRect(0, 0, self.width, self.height, 0.95, 0.06, 0.06, 0.07)
+        self:drawRectBorder(0, 0, self.width, self.height, 0.9, ACCENT.r, ACCENT.g, ACCENT.b)
 
         local function drawSection(panel, section)
-            if not section then
-                return
-            end
+            if not section then return end
             panel:drawRect(section.x, section.y, section.w, section.h, SECTION_BG_ALPHA, 0, 0, 0)
-            panel:drawRectBorder(section.x, section.y, section.w, section.h, SECTION_BORDER_ALPHA, 0.6, 0.6, 0.6)
+            panel:drawRectBorder(section.x, section.y, section.w, section.h, SECTION_BORDER_ALPHA, ACCENT.r, ACCENT.g, ACCENT.b)
         end
+
+        local function drawLabel(x, y, key, fallback)
+            self:drawText(CheatMenuText.get(key, fallback), x, y, LABEL_COLOR.r, LABEL_COLOR.g, LABEL_COLOR.b, 1, UIFont.Small)
+        end
+
+        local function drawSectionHeader(x, y, key, fallback)
+            self:drawRect(x, y + 1, 3, 12, 1, ACCENT.r, ACCENT.g, ACCENT.b)
+            self:drawText(CheatMenuText.get(key, fallback), x + 7, y, ACCENT.r, ACCENT.g, ACCENT.b, 1, UIFont.Small)
+        end
+
+        local separatorY = 40 + TAB_HEIGHT + 8
+        self:drawRect(PADDING, separatorY, self.width - (PADDING * 2), 1, 0.4, ACCENT.r, ACCENT.g, ACCENT.b)
 
         if self.activeTab == "items" then
             drawSection(self, self.favoritesSection)
@@ -1256,147 +1293,108 @@ return function(CheatMenuUI, deps)
         end
 
         local footerY = self.height - STATUS_BAR_HEIGHT - STATUS_BAR_Y
-        self:drawRect(0, footerY, self.width, STATUS_BAR_HEIGHT, 0.78, 0.05, 0.05, 0.05)
-        self:drawRect(0, footerY, self.width, 1, 0.55, self.status.color.r, self.status.color.g, self.status.color.b)
-        self:drawRect(0, footerY, 4, STATUS_BAR_HEIGHT, 0.9, self.status.color.r, self.status.color.g, self.status.color.b)
+        self:drawRect(0, footerY, self.width, STATUS_BAR_HEIGHT, 0.88, 0.04, 0.04, 0.05)
+        self:drawRect(0, footerY, self.width, 1, 0.65, self.status.color.r, self.status.color.g, self.status.color.b)
+        self:drawRect(0, footerY, 4, STATUS_BAR_HEIGHT, 1, self.status.color.r, self.status.color.g, self.status.color.b)
         if self.status.message ~= "" then
             local messageWidth = self.width - (PADDING * 2) - 120
             local maxChars = math.max(24, math.floor(messageWidth / 7))
             local statusText = ellipsize(self.status.message, maxChars)
-            self:drawText(statusText, PADDING + 10, footerY + 6, self.status.color.r, self.status.color.g, self.status.color.b, 1, UIFont.Small)
+            self:drawText(statusText, PADDING + 10, footerY + 7, self.status.color.r, self.status.color.g, self.status.color.b, 1, UIFont.Small)
         end
 
-        self:drawTextRight(CREDIT_TEXT, self.width - PADDING, footerY + 8, 0.7, 0.7, 0.7, 1, UIFont.Small)
+        self:drawTextRight(CREDIT_TEXT, self.width - PADDING, footerY + 7, LABEL_DIM_COLOR.r, LABEL_DIM_COLOR.g, LABEL_DIM_COLOR.b, 1, UIFont.Small)
+        self:drawTextCentre(CheatMenuText.get("UI_ZedToolbox_Title", "Zed Tool"), self.width / 2, 12, ACCENT.r, ACCENT.g, ACCENT.b, 1, UIFont.Medium)
 
-        self:drawTextCentre(CheatMenuText.get("UI_ZedToolbox_Title", "Zed Tool"), self.width / 2, 12, 1, 1, 1, 1, UIFont.Medium)
-        if self.activeTab == "items" and self.searchLabelPos then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Search", "Search"), self.searchLabelPos.x, self.searchLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
         if self.activeTab == "items" then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Categories", "Categories"), self.categoryList.x, self.categoryList.y - 20, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Items", "Items"), self.itemsList.x, self.itemsList.y - 20, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "items" and self.favoritesLabelPos then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Favorites", "Favorites"), self.favoritesLabelPos.x, self.favoritesLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "items" then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_PresetName", "Preset Name"), self.presetNameBox.x, self.presetNameBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "items" and self.presetsLabelPos then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Presets", "Presets"), self.presetsLabelPos.x, self.presetsLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "items" then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_BaseId", "Base ID"), self.baseIdBox.x, self.baseIdBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Quantity", "Quantity"), self.quantityBox.x, self.quantityBox.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Target", "Target"), self.targetCombo.x, self.targetCombo.y - 18, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            if self.searchLabelPos then
+                drawLabel(self.searchLabelPos.x, self.searchLabelPos.y, "UI_ZedToolbox_Search", "Search")
+            end
+            drawSectionHeader(self.categoryList.x, self.categoryList.y - 20, "UI_ZedToolbox_Categories", "Categories")
+            drawSectionHeader(self.itemsList.x, self.itemsList.y - 20, "UI_ZedToolbox_Items", "Items")
+            if self.favoritesLabelPos then
+                drawSectionHeader(self.favoritesLabelPos.x, self.favoritesLabelPos.y, "UI_ZedToolbox_Favorites", "Favorites")
+            end
+            drawLabel(self.presetNameBox.x, self.presetNameBox.y - 22, "UI_ZedToolbox_PresetName", "Preset Name")
+            if self.presetsLabelPos then
+                drawSectionHeader(self.presetsLabelPos.x, self.presetsLabelPos.y, "UI_ZedToolbox_Presets", "Presets")
+            end
+            drawLabel(self.baseIdBox.x, self.baseIdBox.y - 22, "UI_ZedToolbox_BaseId", "Base ID")
+            drawLabel(self.quantityBox.x, self.quantityBox.y - 22, "UI_ZedToolbox_Quantity", "Quantity")
+            drawLabel(self.targetCombo.x, self.targetCombo.y - 22, "UI_ZedToolbox_Target", "Target")
         elseif self.activeTab == "skills" then
+            if self.skillsSection then
+                drawSectionHeader(self.skillsSection.x + 8, self.skillsSection.y + 10, "UI_ZedToolbox_TabSkills", "Skills")
+            end
             if self.skillComboLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Skills_LabelSkill", "Skill"), self.skillComboLabelPos.x, self.skillComboLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+                drawLabel(self.skillComboLabelPos.x, self.skillComboLabelPos.y, "UI_ZedToolbox_Skills_LabelSkill", "Skill")
             end
             if self.skillLevelLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Skills_LabelLevel", "Target Level"), self.skillLevelLabelPos.x, self.skillLevelLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+                drawLabel(self.skillLevelLabelPos.x, self.skillLevelLabelPos.y, "UI_ZedToolbox_Skills_LabelLevel", "Target Level")
             end
             if self.skillCurrentLevelPos and self.skillCurrentLevelText then
-                self:drawText(self.skillCurrentLevelText, self.skillCurrentLevelPos.x, self.skillCurrentLevelPos.y, 0.75, 0.75, 0.75, 1, UIFont.Small)
+                self:drawText(self.skillCurrentLevelText, self.skillCurrentLevelPos.x, self.skillCurrentLevelPos.y, LABEL_DIM_COLOR.r, LABEL_DIM_COLOR.g, LABEL_DIM_COLOR.b, 1, UIFont.Small)
             end
-        end
-        if self.activeTab == "utils" and self.utilsLabelPositions.godMode then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_GodMode", "God Mode"), self.utilsLabelPositions.godMode.x, self.utilsLabelPositions.godMode.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "utils" and self.utilsLabelPositions.hitKill then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_HitKill", "Hit Kill"), self.utilsLabelPositions.hitKill.x, self.utilsLabelPositions.hitKill.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "utils" and self.utilsLabelPositions.infiniteStamina then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_InfiniteStamina", "Infinite Stamina"), self.utilsLabelPositions.infiniteStamina.x, self.utilsLabelPositions.infiniteStamina.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "utils" and self.utilsLabelPositions.instantBuild then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_InstantBuild", "Instant Build"), self.utilsLabelPositions.instantBuild.x, self.utilsLabelPositions.instantBuild.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "utils" and self.utilsLabelPositions.noNegativeEffects then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_NoNegativeEffects", "No Negative Effects"), self.utilsLabelPositions.noNegativeEffects.x, self.utilsLabelPositions.noNegativeEffects.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "utils" and self.utilsLabelPositions.noHungerThirst then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_NoHungerThirst", "No Hunger & Thirst"), self.utilsLabelPositions.noHungerThirst.x, self.utilsLabelPositions.noHungerThirst.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "utils" and self.utilsLabelPositions.speed then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_Utils_Speed", "Speed"), self.utilsLabelPositions.speed.x, self.utilsLabelPositions.speed.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "config" and self.languageLabelPos then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_ConfigLanguage", "Language"), self.languageLabelPos.x, self.languageLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "config" and self.hotkeyLabelPos then
-            self:drawText(CheatMenuText.get("UI_ZedToolbox_ConfigHotkey", "Toggle Hotkey"), self.hotkeyLabelPos.x, self.hotkeyLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-        end
-        if self.activeTab == "traits" then
-            if self.traitsListLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Traits", "Traits"), self.traitsListLabelPos.x, self.traitsListLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+        elseif self.activeTab == "utils" then
+            if self.utilsSection then
+                drawSectionHeader(self.utilsSection.x + 8, self.utilsSection.y + 10, "UI_ZedToolbox_TabUtils", "Player Utilities")
             end
-            if self.traitDetailLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Traits_Details", "Details"), self.traitDetailLabelPos.x, self.traitDetailLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
+            local lp = self.utilsLabelPositions
+            if lp.godMode          then drawLabel(lp.godMode.x,          lp.godMode.y,          "UI_ZedToolbox_Utils_GodMode",          "God Mode")          end
+            if lp.hitKill          then drawLabel(lp.hitKill.x,          lp.hitKill.y,          "UI_ZedToolbox_Utils_HitKill",          "Hit Kill")          end
+            if lp.infiniteStamina  then drawLabel(lp.infiniteStamina.x,  lp.infiniteStamina.y,  "UI_ZedToolbox_Utils_InfiniteStamina",  "Infinite Stamina")  end
+            if lp.instantBuild     then drawLabel(lp.instantBuild.x,     lp.instantBuild.y,     "UI_ZedToolbox_Utils_InstantBuild",     "Instant Build")     end
+            if lp.noNegativeEffects then drawLabel(lp.noNegativeEffects.x, lp.noNegativeEffects.y, "UI_ZedToolbox_Utils_NoNegativeEffects", "No Negative Effects") end
+            if lp.noHungerThirst   then drawLabel(lp.noHungerThirst.x,   lp.noHungerThirst.y,   "UI_ZedToolbox_Utils_NoHungerThirst",   "No Hunger & Thirst") end
+            if lp.speed            then drawLabel(lp.speed.x,            lp.speed.y,            "UI_ZedToolbox_Utils_Speed",            "Speed")             end
+        elseif self.activeTab == "config" then
+            local configHeaderY = LIST_TOP + TAB_HEIGHT + TAB_GAP - 38
+            drawSectionHeader(PADDING, configHeaderY, "UI_ZedToolbox_TabConfig", "Settings")
+            if self.languageLabelPos then drawLabel(self.languageLabelPos.x, self.languageLabelPos.y, "UI_ZedToolbox_ConfigLanguage", "Language") end
+            if self.hotkeyLabelPos   then drawLabel(self.hotkeyLabelPos.x,   self.hotkeyLabelPos.y,   "UI_ZedToolbox_ConfigHotkey",   "Toggle Hotkey") end
+        elseif self.activeTab == "traits" then
+            if self.traitsListLabelPos  then drawSectionHeader(self.traitsListLabelPos.x,  self.traitsListLabelPos.y,  "UI_ZedToolbox_Traits",         "Traits")  end
+            if self.traitDetailLabelPos then drawSectionHeader(self.traitDetailLabelPos.x, self.traitDetailLabelPos.y, "UI_ZedToolbox_Traits_Details",  "Details") end
             if self.traitDetail and self.traitDetail.lines and self.traitDetailTextPos then
                 local y = self.traitDetailTextPos.y
                 for index, line in ipairs(self.traitDetail.lines) do
-                    local color = (self.traitDetail.colors and self.traitDetail.colors[index]) or { r = 0.75, g = 0.75, b = 0.75 }
+                    local color = (self.traitDetail.colors and self.traitDetail.colors[index]) or LABEL_DIM_COLOR
                     self:drawText(line, self.traitDetailTextPos.x, y, color.r, color.g, color.b, 1, UIFont.Small)
                     y = y + 20
                 end
             end
         elseif self.activeTab == "zombies" then
-            if self.zombiesRadiusLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Zombies_Radius", "Radius"), self.zombiesRadiusLabelPos.x, self.zombiesRadiusLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            if self.zombiesSection then
+                drawSectionHeader(self.zombiesSection.x + 8, self.zombiesSection.y + 10, "UI_ZedToolbox_TabZombies", "Zombies")
             end
-            if self.zombiesSpawnCountLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Zombies_Count", "Count"), self.zombiesSpawnCountLabelPos.x, self.zombiesSpawnCountLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
-            if self.zombiesSpawnTypeLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Zombies_Type", "Type (optional)"), self.zombiesSpawnTypeLabelPos.x, self.zombiesSpawnTypeLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
+            if self.zombiesRadiusLabelPos    then drawLabel(self.zombiesRadiusLabelPos.x,    self.zombiesRadiusLabelPos.y,    "UI_ZedToolbox_Zombies_Radius", "Radius")          end
+            if self.zombiesSpawnCountLabelPos then drawLabel(self.zombiesSpawnCountLabelPos.x, self.zombiesSpawnCountLabelPos.y, "UI_ZedToolbox_Zombies_Count",  "Count")           end
+            if self.zombiesSpawnTypeLabelPos  then drawLabel(self.zombiesSpawnTypeLabelPos.x,  self.zombiesSpawnTypeLabelPos.y,  "UI_ZedToolbox_Zombies_Type",   "Type (optional)") end
         elseif self.activeTab == "world" then
-            if self.worldHourLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelHour", "Hour"), self.worldHourLabelPos.x, self.worldHourLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
+            if self.worldSection then
+                drawSectionHeader(self.worldSection.x + 8, self.worldSection.y + 10, "UI_ZedToolbox_TabWorld", "World")
             end
-            if self.worldMinuteLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelMinute", "Minute"), self.worldMinuteLabelPos.x, self.worldMinuteLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
-            if self.worldSkipHoursLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelSkipHours", "Skip Hours"), self.worldSkipHoursLabelPos.x, self.worldSkipHoursLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
-            if self.worldSkipDaysLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelSkipDays", "Skip Days"), self.worldSkipDaysLabelPos.x, self.worldSkipDaysLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
-            if self.worldMultiplierLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelMultiplier", "Time Multiplier"), self.worldMultiplierLabelPos.x, self.worldMultiplierLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
-            if self.worldWeatherLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelWeather", "Weather"), self.worldWeatherLabelPos.x, self.worldWeatherLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
-            if self.worldEventLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_World_LabelEvent", "Event"), self.worldEventLabelPos.x, self.worldEventLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
+            if self.worldHourLabelPos       then drawLabel(self.worldHourLabelPos.x,       self.worldHourLabelPos.y,       "UI_ZedToolbox_World_LabelHour",        "Hour")            end
+            if self.worldMinuteLabelPos     then drawLabel(self.worldMinuteLabelPos.x,     self.worldMinuteLabelPos.y,     "UI_ZedToolbox_World_LabelMinute",      "Minute")          end
+            if self.worldSkipHoursLabelPos  then drawLabel(self.worldSkipHoursLabelPos.x,  self.worldSkipHoursLabelPos.y,  "UI_ZedToolbox_World_LabelSkipHours",   "Skip Hours")      end
+            if self.worldSkipDaysLabelPos   then drawLabel(self.worldSkipDaysLabelPos.x,   self.worldSkipDaysLabelPos.y,   "UI_ZedToolbox_World_LabelSkipDays",    "Skip Days")       end
+            if self.worldMultiplierLabelPos then drawLabel(self.worldMultiplierLabelPos.x, self.worldMultiplierLabelPos.y, "UI_ZedToolbox_World_LabelMultiplier",  "Time Multiplier") end
+            if self.worldWeatherLabelPos    then drawLabel(self.worldWeatherLabelPos.x,    self.worldWeatherLabelPos.y,    "UI_ZedToolbox_World_LabelWeather",     "Weather")         end
+            if self.worldEventLabelPos      then drawLabel(self.worldEventLabelPos.x,      self.worldEventLabelPos.y,      "UI_ZedToolbox_World_LabelEvent",       "Event")           end
         elseif self.activeTab == "moodles" then
-            if self.moodlesListLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Moodles_List", "Moodles"), self.moodlesListLabelPos.x, self.moodlesListLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
-            if self.moodleDetailLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Moodles_Details", "Details"), self.moodleDetailLabelPos.x, self.moodleDetailLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
+            if self.moodlesListLabelPos  then drawSectionHeader(self.moodlesListLabelPos.x,  self.moodlesListLabelPos.y,  "UI_ZedToolbox_Moodles_List",    "Moodles") end
+            if self.moodleDetailLabelPos then drawSectionHeader(self.moodleDetailLabelPos.x, self.moodleDetailLabelPos.y, "UI_ZedToolbox_Moodles_Details", "Details") end
             if self.moodleDetail and self.moodleDetail.lines and self.moodleDetailTextPos then
                 local y = self.moodleDetailTextPos.y
                 for index, line in ipairs(self.moodleDetail.lines) do
-                    local color = (self.moodleDetail.colors and self.moodleDetail.colors[index]) or { r = 0.75, g = 0.75, b = 0.75 }
+                    local color = (self.moodleDetail.colors and self.moodleDetail.colors[index]) or LABEL_DIM_COLOR
                     self:drawText(line, self.moodleDetailTextPos.x, y, color.r, color.g, color.b, 1, UIFont.Small)
                     y = y + 20
                 end
             end
-        end
-        if self.activeTab == "profiles" then
-            if self.profilesListLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Profiles", "Profiles"), self.profilesListLabelPos.x, self.profilesListLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
-            if self.profileNameLabelPos then
-                self:drawText(CheatMenuText.get("UI_ZedToolbox_Profile_Name", "Profile Name"), self.profileNameLabelPos.x, self.profileNameLabelPos.y, 0.8, 0.8, 0.8, 1, UIFont.Small)
-            end
+        elseif self.activeTab == "profiles" then
+            if self.profilesListLabelPos then drawSectionHeader(self.profilesListLabelPos.x, self.profilesListLabelPos.y, "UI_ZedToolbox_Profiles",     "Profiles")     end
+            if self.profileNameLabelPos  then drawLabel(self.profileNameLabelPos.x,          self.profileNameLabelPos.y,  "UI_ZedToolbox_Profile_Name", "Profile Name") end
         end
     end
 end

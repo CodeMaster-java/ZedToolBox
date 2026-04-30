@@ -248,10 +248,10 @@ return function(CheatMenuUI, deps)
 
     function CheatMenuUI:buildZombiesUI()
         local contentTop = LIST_TOP + TAB_HEIGHT + TAB_GAP
-        local sectionTop = contentTop - 30
+        local sectionTop = contentTop - 50
         local buttonWidth = 220
 
-        self.zombiesRadiusLabelPos = { x = PADDING, y = contentTop - 18 }
+        self.zombiesRadiusLabelPos = { x = PADDING, y = contentTop - 22 }
         self.zombiesRadiusEntry = ISTextEntryBox:new(tostring((CheatMenuUtils.getState() and CheatMenuUtils.getState().clearRadius) or 15), PADDING, contentTop, 80, 22)
         self.zombiesRadiusEntry:initialise()
         self.zombiesRadiusEntry:instantiate()
